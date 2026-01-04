@@ -38,6 +38,7 @@
     />
 
     <style>
+      /* Updated spacing v2.0 - Last updated: 2026-01-04 */
       .search-filters {
         background: var(--accent-white);
         padding: 1.5rem;
@@ -92,6 +93,10 @@
         color: inherit;
         padding: 0;
         box-shadow: none;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
       }
       .hospital-nav {
         display: flex;
@@ -148,47 +153,65 @@
       }
 
       .hospital-name {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         font-weight: 600;
         color: var(--primary-red);
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.3rem;
+        line-height: 1.3;
       }
 
       .hospital-type {
         color: var(--secondary-gray);
         font-size: 0.9rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        line-height: 1.4;
       }
 
       .hospital-address {
         color: var(--secondary-gray);
         font-size: 0.9rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        line-height: 1.4;
       }
 
       .distance-badge {
         background: var(--info-blue);
         color: var(--accent-white);
-        padding: 0.25rem 0.75rem;
+        padding: 0.35rem 0.85rem;
         border-radius: var(--border-radius-lg);
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 500;
+        white-space: nowrap;
       }
 
       .blood-availability {
-        margin: 1rem 0;
+        margin: 0.75rem 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+      }
+
+      .blood-availability h6 {
+        margin-bottom: 0.7rem;
+        font-size: 1rem;
+        font-weight: 600;
       }
 
       .blood-types-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 0.75rem;
-        margin-top: 0.75rem;
+        gap: 0.7rem;
+        margin-top: 0.7rem;
       }
 
       .blood-type-card {
         text-align: center;
-        padding: 0.75rem 0.5rem;
+        padding: 0.7rem 0.5rem;
         border-radius: var(--border-radius-md);
         border: 2px solid;
         transition: all var(--transition-fast);
@@ -225,23 +248,36 @@
       .hospital-actions {
         display: flex;
         gap: 0.75rem;
-        margin-top: 1rem;
+        margin-top: 0.9rem;
+        padding-top: 0.9rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
         flex-wrap: wrap;
       }
 
       .contact-info {
         display: flex;
         gap: 1.5rem;
-        margin: 1rem 0;
+        margin: 0.4rem 0 0.75rem 0;
         flex-wrap: wrap;
       }
 
       .contact-item {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.6rem;
         color: var(--secondary-gray);
         font-size: 0.9rem;
+        line-height: 1.4;
+      }
+
+      .contact-item i {
+        font-size: 1rem;
+        width: 20px;
+        text-align: center;
+      }
+
+      .contact-item.text-muted {
+        opacity: 0.6;
       }
 
       .emergency-banner {
@@ -713,6 +749,46 @@
 
         console.log("[SEARCH_BLOOD] Page loading, checking authentication...");
 
+        // Check immediately if dependencies are already loaded
+        if (
+          typeof Session !== "undefined" &&
+          typeof API !== "undefined" &&
+          typeof Notifications !== "undefined"
+        ) {
+          console.log(
+            "[SEARCH_BLOOD] Dependencies already loaded, initializing immediately..."
+          );
+          initializePage();
+          return;
+        }
+
+        // If not loaded yet, wait with a short interval
+        console.log("[SEARCH_BLOOD] Waiting for dependencies to load...");
+        let checkCount = 0;
+        const checkDependencies = setInterval(() => {
+          checkCount++;
+          if (
+            typeof Session !== "undefined" &&
+            typeof API !== "undefined" &&
+            typeof Notifications !== "undefined"
+          ) {
+            clearInterval(checkDependencies);
+            console.log(
+              `[SEARCH_BLOOD] Dependencies loaded after ${checkCount * 10}ms`
+            );
+            initializePage();
+          } else if (checkCount > 500) {
+            // 5 seconds max
+            clearInterval(checkDependencies);
+            console.error("[SEARCH_BLOOD] Dependencies failed to load");
+            alert(
+              "System Error: Required components not loaded. Please refresh the page."
+            );
+          }
+        }, 10); // Check every 10ms for faster response
+      });
+
+      function initializePage() {
         // Check user authentication first, then proceed
         checkUserAuth()
           .then((user) => {
@@ -741,7 +817,7 @@
             console.log("[SEARCH_BLOOD] Auth failed, should redirect...");
             // Auth failed, will redirect
           });
-      });
+      }
 
       function setUserHeaderInfo(user) {
         if (!user) return;
@@ -954,20 +1030,45 @@
       }
 
       function createHospitalCard(hospital) {
+        // Log hospital data for debugging
+        console.log("[SEARCH_BLOOD] Creating card for hospital:", hospital);
+        console.log("[SEARCH_BLOOD] Hospital fields check:", {
+          contact_phone: hospital.contact_phone,
+          phone: hospital.phone,
+          contact_email: hospital.contact_email,
+          email: hospital.email,
+        });
+
         // Ensure hospital object has required properties with defaults
+        // Handle multiple possible field names from API
+        // IMPORTANT: Spread hospital first, then override with our computed values
         const safeHospital = {
+          ...hospital,
           id: hospital.id || 0,
           hospital_name: hospital.hospital_name || "Unknown Hospital",
           hospital_type: hospital.hospital_type || "General",
           address: hospital.address || "Address not available",
           city: hospital.city || "",
           state: hospital.state || "",
-          phone: hospital.phone || "Not available",
+          phone:
+            hospital.contact_phone ||
+            hospital.phone ||
+            hospital.contact_number ||
+            hospital.phone_number ||
+            "",
+          email:
+            hospital.contact_email ||
+            hospital.email ||
+            hospital.email_address ||
+            "",
           emergency_contact: hospital.emergency_contact || null,
           blood_inventory: hospital.blood_inventory || [],
           total_units: hospital.total_units || 0,
-          ...hospital,
+          website: hospital.website || "",
         };
+
+        console.log("[SEARCH_BLOOD] SafeHospital phone:", safeHospital.phone);
+        console.log("[SEARCH_BLOOD] SafeHospital email:", safeHospital.email);
 
         return `
                 <div class="hospital-card" data-hospital-id="${
@@ -982,7 +1083,9 @@
                                 <i class="fas fa-${getHospitalIcon(
                                   safeHospital.hospital_type
                                 )}"></i>
-                                ${escapeHtml(safeHospital.hospital_type)}
+                                <span>${escapeHtml(
+                                  safeHospital.hospital_type
+                                )}</span>
                                 ${
                                   safeHospital.is_24_7
                                     ? '<span class="badge badge-success ml-2">24/7</span>'
@@ -991,40 +1094,59 @@
                             </div>
                             <div class="hospital-address">
                                 <i class="fas fa-map-marker-alt"></i>
-                                ${escapeHtml(hospital.address)}, ${escapeHtml(
-          hospital.city
-        )}
+                                <span>${escapeHtml(
+                                  safeHospital.address
+                                )}, ${escapeHtml(safeHospital.city)}</span>
                             </div>
                         </div>
                         ${
-                          hospital.distance
-                            ? `<div class="distance-badge">${hospital.distance} km</div>`
+                          safeHospital.distance
+                            ? `<div class="distance-badge">${safeHospital.distance} km</div>`
                             : ""
                         }
                     </div>
                     
                     <div class="contact-info">
+                        ${
+                          safeHospital.phone &&
+                          safeHospital.phone !== "Not available"
+                            ? `
                         <div class="contact-item">
                             <i class="fas fa-phone"></i>
-                            <span>${escapeHtml(hospital.phone)}</span>
+                            <span>${escapeHtml(safeHospital.phone)}</span>
                         </div>
+                        `
+                            : `
+                        <div class="contact-item text-muted">
+                            <i class="fas fa-phone"></i>
+                            <span>Phone not available</span>
+                        </div>
+                        `
+                        }
                         ${
-                          hospital.email
+                          safeHospital.email &&
+                          safeHospital.email !== "N/A" &&
+                          safeHospital.email !== "Not available"
                             ? `
                         <div class="contact-item">
                             <i class="fas fa-envelope"></i>
-                            <span>${escapeHtml(hospital.email)}</span>
+                            <span>${escapeHtml(safeHospital.email)}</span>
                         </div>
                         `
-                            : ""
+                            : `
+                        <div class="contact-item text-muted">
+                            <i class="fas fa-envelope"></i>
+                            <span>Email not available</span>
+                        </div>
+                        `
                         }
                         ${
-                          hospital.website
+                          safeHospital.website
                             ? `
                         <div class="contact-item">
                             <i class="fas fa-globe"></i>
                             <a href="${escapeHtml(
-                              hospital.website
+                              safeHospital.website
                             )}" target="_blank">Website</a>
                         </div>
                         `
@@ -1036,31 +1158,31 @@
                         <h6><i class="fas fa-tint"></i> Blood Availability</h6>
                         <div class="blood-types-grid">
                             ${createBloodTypeCards(
-                              hospital.blood_inventory || []
+                              safeHospital.blood_inventory || []
                             )}
                         </div>
                     </div>
                     
                     <div class="hospital-actions">
                         <button class="btn btn-primary btn-sm" onclick="viewHospitalDetails(${
-                          hospital.id
+                          safeHospital.id
                         })">
                             <i class="fas fa-info-circle"></i> View Details
                         </button>
                         <button class="btn btn-outline-primary btn-sm" onclick="contactHospital(${
-                          hospital.id
+                          safeHospital.id
                         })">
                             <i class="fas fa-phone"></i> Contact
                         </button>
                         <button class="btn btn-outline-success btn-sm" onclick="getDirections('${
-                          hospital.address
-                        }, ${hospital.city}')">
+                          safeHospital.address
+                        }, ${safeHospital.city}')">
                             <i class="fas fa-directions"></i> Directions
                         </button>
                         ${
-                          hospital.accepts_donations
+                          safeHospital.accepts_donations
                             ? `
-                        <button class="btn btn-outline-info btn-sm" onclick="scheduleAppointment(${hospital.id})">
+                        <button class="btn btn-outline-info btn-sm" onclick="scheduleAppointment(${safeHospital.id})">
                             <i class="fas fa-calendar-plus"></i> Schedule Donation
                         </button>
                         `
@@ -1224,6 +1346,12 @@
         // Store current hospital ID for modal actions
         currentHospitalId = hospitalId;
 
+        // Get phone and email with same logic as card display
+        const phone =
+          hospital.contact_phone || hospital.phone || "Not available";
+        const email =
+          hospital.contact_email || hospital.email || "Not available";
+
         const content = `
                 <div class="row">
                     <div class="col-md-6">
@@ -1236,10 +1364,10 @@
                               hospital.hospital_type || "Hospital"
                             )}</td></tr>
                             <tr><td><strong>Phone:</strong></td><td>${escapeHtml(
-                              hospital.phone
+                              phone
                             )}</td></tr>
                             <tr><td><strong>Email:</strong></td><td>${escapeHtml(
-                              hospital.email || "N/A"
+                              email
                             )}</td></tr>
                             <tr><td><strong>Website:</strong></td><td>${
                               hospital.website
