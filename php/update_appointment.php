@@ -152,6 +152,28 @@ try {
                         WHERE hospital_id = ? AND blood_type = ?
                     ");
                     $stmt->execute([$appointment['hospital_id'], $appointment['blood_type']]);
+
+                    // Update user rewards (points and donation count)
+                    try {
+                        $pointsPerDonation = 10;
+                        $stmt = $pdo->prepare("
+                            INSERT INTO user_rewards (user_id, total_points, current_points, level, donations_count, last_updated)
+                            VALUES (?, ?, ?, 1, 1, NOW())
+                            ON DUPLICATE KEY UPDATE
+                                total_points = total_points + VALUES(total_points),
+                                current_points = current_points + VALUES(current_points),
+                                donations_count = donations_count + 1,
+                                level = GREATEST(level, FLOOR((total_points + VALUES(total_points)) / 100) + 1),
+                                last_updated = NOW()
+                        ");
+                        $stmt->execute([
+                            $appointment['donor_id'],
+                            $pointsPerDonation,
+                            $pointsPerDonation
+                        ]);
+                    } catch (PDOException $e) {
+                        error_log("User rewards update failed: " . $e->getMessage());
+                    }
                     
                     // Log the activity
                     try {

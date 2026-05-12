@@ -188,6 +188,11 @@ try {
         error_log("Activity stats query failed: " . $e->getMessage());
     }
 
+    // Flatten commonly used fields for legacy dashboard usage
+    $stats['total_donations'] = $stats['donations']['total_donations'] ?? 0;
+    $stats['reward_points'] = $stats['rewards']['current_points'] ?? 0;
+    $stats['consecutive_donations'] = $stats['donations']['completed_donations'] ?? 0;
+
     echo json_encode([
         'success' => true,
         'data' => $stats
