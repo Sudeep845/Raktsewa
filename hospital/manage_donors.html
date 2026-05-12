@@ -268,6 +268,12 @@
         max-width: 800px;
       }
 
+      .donor-details-modal .modal-footer .btn {
+        padding: 0.6rem 1.4rem;
+        font-size: 0.95rem;
+        min-width: 120px;
+      }
+
       .detail-tabs {
         border-bottom: 2px solid var(--accent-border);
         margin-bottom: 1.5rem;
@@ -946,6 +952,7 @@
     <script>
       let currentPage = 1;
       let currentStep = 1;
+      let currentDonors = [];
 
       // Ensure calculateAge function is available
       function calculateAge(dateOfBirth) {
@@ -1109,6 +1116,7 @@
         API.get("get_donors.php", filters)
           .then((response) => {
             if (response.success) {
+              currentDonors = response.data.donors || [];
               displayDonors(response.data.donors);
               updatePagination(response.data.pagination);
               updateResultsCount(response.data.pagination.total);
@@ -1159,7 +1167,7 @@
                                     Age: ${calculateAge(
                                       donor.date_of_birth
                                     )} • ${Utils.escapeHtml(
-              donor.city || "Unknown City"
+              donor.city || donor.state || "Unknown Location"
             )}
                                 </div>
                             </div>
@@ -1228,8 +1236,14 @@
       }
 
       function calculateAge(birthDate) {
+        if (!birthDate) {
+          return "N/A";
+        }
         const today = new Date();
         const birth = new Date(birthDate);
+        if (Number.isNaN(birth.getTime())) {
+          return "N/A";
+        }
         let age = today.getFullYear() - birth.getFullYear();
         const monthDiff = today.getMonth() - birth.getMonth();
 
@@ -1630,10 +1644,101 @@
       }
 
       function scheduleDonation(donorId) {
-        Notifications.info(
-          "Schedule Donation",
-          "Donation scheduling feature coming soon!"
-        );
+        const donor = currentDonors.find((item) => item.id === donorId);
+        if (!donor) {
+          Notifications.error("Error", "Unable to find donor details");
+          return;
+        }
+
+        const user =
+          typeof Session !== "undefined" ? Session.getCurrentUser() : null;
+        const hospitalId = user && user.hospital_id ? user.hospital_id : null;
+
+        if (!hospitalId) {
+          Notifications.error("Error", "Hospital session not found");
+          return;
+        }
+
+        if (!donor.blood_type) {
+          Notifications.error("Error", "Donor blood type is missing");
+          return;
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+
+        Swal.fire({
+          title: "Schedule Donation",
+          html: `
+            <div class="text-left">
+              <div class="mb-2"><strong>Donor:</strong> ${Utils.escapeHtml(
+                donor.full_name
+              )}</div>
+              <div class="mb-3"><strong>Blood Type:</strong> ${Utils.escapeHtml(
+                donor.blood_type
+              )}</div>
+              <label class="small mb-1">Date</label>
+              <input id="scheduleDate" type="date" class="swal2-input" min="${today}" value="${today}" />
+              <label class="small mb-1">Time</label>
+              <input id="scheduleTime" type="time" class="swal2-input" />
+              <label class="small mb-1">Notes (optional)</label>
+              <textarea id="scheduleNotes" class="swal2-textarea" placeholder="Add any notes"></textarea>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: "Schedule",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#dc3545",
+          focusConfirm: false,
+          preConfirm: () => {
+            const date = document.getElementById("scheduleDate").value;
+            const time = document.getElementById("scheduleTime").value;
+
+            if (!date || !time) {
+              Swal.showValidationMessage("Please select a date and time");
+              return null;
+            }
+
+            return {
+              date,
+              time,
+              notes: document.getElementById("scheduleNotes").value.trim(),
+            };
+          },
+        }).then((result) => {
+          if (!result.isConfirmed || !result.value) {
+            return;
+          }
+
+          const appointmentTime = result.value.time.includes(":")
+            ? `${result.value.time}:00`
+            : `${result.value.time}`;
+
+          API.post("create_appointment.php", {
+            donor_id: donorId,
+            hospital_id: hospitalId,
+            appointment_date: result.value.date,
+            appointment_time: appointmentTime,
+            blood_type: donor.blood_type,
+            notes: result.value.notes,
+          })
+            .then((response) => {
+              if (!response.success) {
+                throw new Error(response.message || "Failed to schedule");
+              }
+
+              Notifications.success(
+                "Scheduled",
+                "Donation appointment scheduled successfully"
+              );
+              loadDonors(currentPage);
+            })
+            .catch((error) => {
+              Notifications.error(
+                "Error",
+                "Failed to schedule donation: " + error.message
+              );
+            });
+        });
       }
 
       function contactDonor(phone) {

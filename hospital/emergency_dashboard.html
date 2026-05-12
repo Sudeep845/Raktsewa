@@ -973,6 +973,33 @@
           stats.pending_count || 0;
       }
 
+      function calculateStats(requests) {
+        const stats = {
+          critical_count: 0,
+          high_count: 0,
+          total_requests: 0,
+          pending_count: 0,
+        };
+
+        if (!Array.isArray(requests)) {
+          return stats;
+        }
+
+        stats.total_requests = requests.length;
+
+        requests.forEach((request) => {
+          if (request.urgency === "critical") stats.critical_count += 1;
+          if (request.urgency === "high") stats.high_count += 1;
+
+          const status = (request.status || "").toLowerCase();
+          if (!status || status === "pending") {
+            stats.pending_count += 1;
+          }
+        });
+
+        return stats;
+      }
+
       function applyFilters() {
         console.log("Applying filters. Total requests:", emergencyRequests.length);
         console.log("Current filters:", currentFilters);
@@ -1191,44 +1218,74 @@
               : "#6c757d",
         }).then((result) => {
           if (result.isConfirmed) {
-            // Simulate API call
             showLoading();
 
-            setTimeout(() => {
-              hideLoading();
-              
-              // Dynamic success message based on status
-              const successMessages = {
-                available: {
-                  title: "Blood Available - Response Sent!",
-                  text: "The requesting hospital has been notified that blood is available for immediate pickup.",
-                  icon: "success"
-                },
-                partial: {
-                  title: "Partial Availability - Response Sent!",
-                  text: "The requesting hospital has been informed about partial availability. They will contact you for details.",
-                  icon: "info"
-                },
-                unavailable: {
-                  title: "Response Sent!",
-                  text: "The requesting hospital has been notified that blood is currently unavailable.",
-                  icon: "info"
-                }
-              };
-              
-              const message = successMessages[status] || successMessages.unavailable;
-              
-              Swal.fire({
-                title: message.title,
-                text: message.text,
-                icon: message.icon,
-                timer: 3000,
-                showConfirmButton: false,
-              });
+            const statusMap = {
+              available: "accepted",
+              partial: "pending",
+              unavailable: "declined",
+            };
 
-              // Refresh the requests
-              loadEmergencyRequests();
-            }, 1000);
+            const user =
+              typeof Session !== "undefined" ? Session.getCurrentUser() : null;
+
+            API.post("respond_emergency_request.php", {
+              request_id: requestId,
+              status: statusMap[status] || "pending",
+              hospital_response: statusMessages[status] || "",
+              hospital_id: user && user.hospital_id ? user.hospital_id : null,
+            })
+              .then((response) => {
+                hideLoading();
+
+                if (!response.success) {
+                  throw new Error(response.message || "Failed to send response");
+                }
+
+                const successMessages = {
+                  available: {
+                    title: "Blood Available - Response Sent!",
+                    text: "The requesting hospital has been notified that blood is available for immediate pickup.",
+                    icon: "success",
+                  },
+                  partial: {
+                    title: "Partial Availability - Response Sent!",
+                    text: "The requesting hospital has been informed about partial availability. They will contact you for details.",
+                    icon: "info",
+                  },
+                  unavailable: {
+                    title: "Response Sent!",
+                    text: "The requesting hospital has been notified that blood is currently unavailable.",
+                    icon: "info",
+                  },
+                };
+
+                const message =
+                  successMessages[status] || successMessages.unavailable;
+
+                Swal.fire({
+                  title: message.title,
+                  text: message.text,
+                  icon: message.icon,
+                  timer: 2500,
+                  showConfirmButton: false,
+                });
+
+                emergencyRequests = emergencyRequests.filter(
+                  (request) => request.id !== requestId
+                );
+                filteredRequests = filteredRequests.filter(
+                  (request) => request.id !== requestId
+                );
+
+                displayEmergencyRequests(filteredRequests);
+                updateStatistics(calculateStats(emergencyRequests));
+                updateLastUpdated();
+              })
+              .catch((error) => {
+                hideLoading();
+                showError(error.message || "Failed to send response");
+              });
           }
         });
       }
