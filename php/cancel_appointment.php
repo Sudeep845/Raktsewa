@@ -67,12 +67,7 @@ try {
         exit();
     }
     
-    // Check if appointment is in the past
-    $appointment_datetime = strtotime($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
-    if ($appointment_datetime < time()) {
-        echo json_encode(['success' => false, 'message' => 'Cannot cancel past appointments']);
-        exit();
-    }
+    // Past-date restriction removed to allow users to cancel any non-completed appointment.
     
     // Update appointment status to cancelled
     $stmt = $db->prepare("
