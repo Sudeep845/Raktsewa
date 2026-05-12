@@ -159,10 +159,16 @@ try {
             u.full_name,
             ur.total_points,
             ur.level,
-            ur.donations_count,
+            COALESCE(d.completed_count, 0) as donations_count,
             RANK() OVER (ORDER BY ur.total_points DESC) as rank_position
         FROM user_rewards ur
         JOIN users u ON ur.user_id = u.id
+        LEFT JOIN (
+            SELECT donor_id, COUNT(*) as completed_count
+            FROM donations
+            WHERE status = 'completed'
+            GROUP BY donor_id
+        ) d ON d.donor_id = u.id
         WHERE u.is_active = 1
         ORDER BY ur.total_points DESC
         LIMIT 10
