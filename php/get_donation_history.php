@@ -59,12 +59,33 @@ try {
             MAX(donation_date) as last_donation,
             AVG(units_donated) as avg_units_per_donation
         FROM donations 
-        WHERE donor_id = ? AND status = 'completed'
+        WHERE donor_id = ?
     ";
     
     $stmt = $db->prepare($summaryQuery);
     $stmt->execute([$userId]);
     $summary = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Fallback: if no donation rows yet, use completed appointments for totals
+    $appointmentsSummary = [
+        'total_completed' => 0,
+        'last_completed' => null
+    ];
+
+    try {
+        $appointmentsQuery = "
+            SELECT
+                COUNT(*) as total_completed,
+                MAX(appointment_date) as last_completed
+            FROM appointments
+            WHERE donor_id = ? AND status = 'completed'
+        ";
+        $stmt = $db->prepare($appointmentsQuery);
+        $stmt->execute([$userId]);
+        $appointmentsSummary = $stmt->fetch(PDO::FETCH_ASSOC) ?: $appointmentsSummary;
+    } catch (Exception $e) {
+        // Ignore if appointments table is unavailable
+    }
     
     // Get monthly donation counts for chart
     $monthlyQuery = "
@@ -109,14 +130,19 @@ try {
     $responseData = [
         'donations' => $donations,
         'summary' => [
-            'total_donations' => intval($summary['total_donations'] ?? 0),
+            'total_donations' => intval($summary['total_donations'] ?? 0) ?: intval($appointmentsSummary['total_completed'] ?? 0),
             'total_units' => intval($summary['total_units'] ?? 0),
             'first_donation' => $summary['first_donation'],
-            'last_donation' => $summary['last_donation'],
+            'last_donation' => $summary['last_donation'] ?: ($appointmentsSummary['last_completed'] ?? null),
             'avg_units_per_donation' => round(floatval($summary['avg_units_per_donation'] ?? 0), 1),
             'next_eligible_date' => $nextEligibleDate
         ],
-        'monthly_data' => $monthlyData
+        'monthly_data' => $monthlyData,
+        'debug' => [
+            'session_user_id' => $userId,
+            'donations_count' => count($donations),
+            'completed_appointments_count' => intval($appointmentsSummary['total_completed'] ?? 0)
+        ]
     ];
     
     sendJsonResponse(true, 'Donation history retrieved successfully', $responseData);

@@ -867,6 +867,8 @@
           });
       }
       function loadDonationHistory() {
+        updateTotalsFromStats();
+
         API.get("get_donation_history.php")
           .then((response) => {
             if (response.success) {
@@ -892,14 +894,60 @@
           .catch((error) => {
             console.error("Error loading donation history:", error);
             displayNoDonations();
+            updateTotalsFromStats();
+          });
+      }
+
+      function updateTotalsFromStats() {
+        API.get("get_user_stats.php")
+          .then((response) => {
+            if (!response.success) {
+              return;
+            }
+            const stats = response.data || {};
+            const donationsBlock = stats.donations || {};
+            const totalDonations =
+              stats.total_donations || donationsBlock.total_donations || 0;
+
+            if (totalDonations > 0) {
+              document.getElementById("totalDonations").textContent =
+                totalDonations;
+              document.getElementById("livesSaved").textContent =
+                totalDonations * 3;
+            }
+
+            const completedDonations =
+              donationsBlock.completed_donations ||
+              stats.consecutive_donations ||
+              0;
+
+            if (completedDonations > 0) {
+              document.getElementById("currentStreak").textContent =
+                completedDonations;
+            }
+
+            const lastDonationDate = donationsBlock.last_donation_date || "";
+            if (lastDonationDate) {
+              const daysSince = Math.floor(
+                (new Date() - new Date(lastDonationDate)) /
+                  (1000 * 60 * 60 * 24),
+              );
+              document.getElementById("daysSinceLast").textContent = daysSince;
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading user stats:", error);
           });
       }
 
       function updateSummaryStats(summary, donations) {
-        document.getElementById("totalDonations").textContent =
-          summary.total_donations || 0;
+        const totalFromSummary = summary.total_donations || 0;
+        const totalFromList = Array.isArray(donations) ? donations.length : 0;
+        const totalDonations = totalFromSummary || totalFromList;
+
+        document.getElementById("totalDonations").textContent = totalDonations;
         document.getElementById("livesSaved").textContent =
-          summary.total_donations * 3 || 0;
+          totalDonations * 3 || 0;
         document.getElementById("currentStreak").textContent =
           summary.current_streak || 0;
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -755,6 +755,37 @@
             <p>Redeem your points for exclusive rewards and benefits</p>
           </div>
           <div class="shop-items">
+            <div class="shop-intro mb-3 text-muted">
+              Exchange points for donor-friendly perks like wellness kits,
+              priority scheduling, and partner discounts. New items rotate
+              monthly based on availability.
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-4 mb-2">
+                <div class="p-3 bg-light rounded">
+                  <strong>Popular Rewards</strong>
+                  <div class="small text-muted">
+                    Wellness kit, protein pack, free health check
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 mb-2">
+                <div class="p-3 bg-light rounded">
+                  <strong>Donor Benefits</strong>
+                  <div class="small text-muted">
+                    Priority slots, fast check-in, bonus points days
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 mb-2">
+                <div class="p-3 bg-light rounded">
+                  <strong>Partner Offers</strong>
+                  <div class="small text-muted">
+                    Local pharmacy discounts, fitness passes
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="shop-grid" id="shopGrid">
               <!-- Shop items will be populated here -->
             </div>
@@ -764,6 +795,10 @@
         <!-- Achievements -->
         <div class="achievements-section">
           <h4><i class="fas fa-trophy"></i> Achievements</h4>
+          <p class="text-muted mb-3">
+            Track milestones like first donation, streaks, and impact goals.
+            Complete achievements to unlock bonus points and special badges.
+          </p>
           <div id="achievementsList">
             <!-- Achievements will be populated here -->
           </div>
@@ -846,7 +881,7 @@
         ) {
           Notifications.confirm(
             "Logout",
-            "Are you sure you want to logout?"
+            "Are you sure you want to logout?",
           ).then((result) => {
             if (result.isConfirmed) {
               Session.logout()
@@ -873,8 +908,8 @@
             user.full_name && user.full_name.length > 0
               ? user.full_name.charAt(0).toUpperCase()
               : user.username
-              ? user.username.charAt(0).toUpperCase()
-              : "U";
+                ? user.username.charAt(0).toUpperCase()
+                : "U";
         // Set username (full_name or username)
         const userName = document.getElementById("userName");
         if (userName)
@@ -888,8 +923,8 @@
           userBloodType.textContent = user.blood_type
             ? `${user.blood_type} Donor`
             : user.role
-            ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-            : "Blood Donor";
+              ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+              : "Blood Donor";
       }
       let userRewards = null;
       let shopItems = [];
@@ -926,10 +961,10 @@
         // Check if Session object is available
         if (typeof Session === "undefined") {
           console.error(
-            "[REWARDS] Session object not available - main.js not loaded?"
+            "[REWARDS] Session object not available - main.js not loaded?",
           );
           alert(
-            "System Error: Session management not loaded. Please refresh the page."
+            "System Error: Session management not loaded. Please refresh the page.",
           );
           return Promise.reject(new Error("Session object missing"));
         }
@@ -940,7 +975,7 @@
 
         if (fromLogin) {
           console.log(
-            "[REWARDS] Recently came from login, skipping redirect check"
+            "[REWARDS] Recently came from login, skipping redirect check",
           );
         }
 
@@ -960,7 +995,7 @@
             if (user.role !== "donor") {
               console.log(
                 "[REWARDS] Wrong role - expected 'donor', got:",
-                user.role
+                user.role,
               );
               if (!fromLogin) {
                 console.log("[REWARDS] Redirecting due to wrong role...");
@@ -1055,7 +1090,7 @@
             Swal.fire(
               "Error",
               "Could not load rewards data. Please try again later.",
-              "error"
+              "error",
             );
           });
       }
@@ -1154,7 +1189,7 @@
                         }
                     </button>
                 </div>
-            `
+            `,
           )
           .join("");
       }
@@ -1189,7 +1224,7 @@
                         }
                     </div>
                 </div>
-            `
+            `,
           )
           .join("");
       }
@@ -1219,8 +1254,8 @@
                         </div>
                         <div class="leaderboard-info">
                             <div class="leaderboard-name">${user.name} ${
-              user.isCurrentUser ? "(You)" : ""
-            }</div>
+                              user.isCurrentUser ? "(You)" : ""
+                            }</div>
                             <div class="leaderboard-stats">${
                               user.donations
                             } donations</div>
@@ -1241,7 +1276,7 @@
             "Insufficient Points",
             `You need ${
               item.cost - userRewards.total_points
-            } more points to redeem this item.`
+            } more points to redeem this item.`,
           );
           return;
         }
@@ -1285,7 +1320,7 @@
               $("#redeemModal").modal("hide");
               Notifications.success(
                 "Redeemed!",
-                `${item.title} has been redeemed successfully. Check your email for details.`
+                `${item.title} has been redeemed successfully. Check your email for details.`,
               );
             } else {
               throw new Error(response.message);
@@ -1295,7 +1330,7 @@
             console.error("Redemption error:", error);
             Notifications.error(
               "Redemption Failed",
-              "Unable to redeem item: " + error.message
+              "Unable to redeem item: " + error.message,
             );
           });
       }
@@ -1332,8 +1367,8 @@
                             }%"></div>
                         </div>
                         <p>Progress: ${badge.progress || 0}/${
-                            badge.requirement
-                          }</p>
+                          badge.requirement
+                        }</p>
                     `
                     }
                     
@@ -1366,7 +1401,7 @@
             .then(() => {
               Notifications.success(
                 "Copied!",
-                "Badge text copied to clipboard. Share it on your social media!"
+                "Badge text copied to clipboard. Share it on your social media!",
               );
             })
             .catch(() => {

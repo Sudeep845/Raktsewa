@@ -33,6 +33,9 @@ try {
     $appointment_id = intval($input['appointment_id']);
     $action = $input['action'];
     $user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
+
+    // Get database connection
+    $pdo = getDBConnection();
     
     // Get current appointment details
     $stmt = $pdo->prepare("
