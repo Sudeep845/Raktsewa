@@ -73,6 +73,20 @@ try {
     if ($endDate < $today) $daysRemaining = 0;
     
     $currentDonors = $campaignData['current_donors'] ?? 0;
+    $registeredCount = 0;
+    try {
+        $countStmt = $pdo->prepare(
+            "SELECT COUNT(*) FROM campaign_registrations WHERE campaign_id = ? AND status IN ('registered','attended')"
+        );
+        $countStmt->execute([$campaignActivity['id']]);
+        $registeredCount = (int)$countStmt->fetchColumn();
+    } catch (Exception $e) {
+        $registeredCount = 0;
+    }
+
+    if ($registeredCount > $currentDonors) {
+        $currentDonors = $registeredCount;
+    }
     $targetDonors = $campaignData['target_donors'] ?? 100;
     $progressPercentage = $targetDonors > 0 ? min(100, ($currentDonors / $targetDonors) * 100) : 0;
     
@@ -147,6 +161,7 @@ try {
         'end_time' => $campaignData['end_time'] ?? '17:00',
         'target_donors' => $targetDonors,
         'current_donors' => $currentDonors,
+        'registered_count' => $registeredCount,
         'max_capacity' => $campaignData['max_capacity'] ?? $targetDonors,
         'image_path' => $campaignData['image_path'] ?? null,
         'hospital_id' => $campaignActivity['hospital_id'],

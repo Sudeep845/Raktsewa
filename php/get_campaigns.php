@@ -80,6 +80,21 @@ try {
                 
                 // Calculate progress
                 $currentDonors = $campaignData['current_donors'] ?? 0;
+                $registeredCount = 0;
+                try {
+                    $countStmt = $pdo->prepare(
+                        "SELECT COUNT(*) FROM campaign_registrations WHERE campaign_id = ? AND status IN ('registered','attended')"
+                    );
+                    $countStmt->execute([$activity['id']]);
+                    $registeredCount = (int)$countStmt->fetchColumn();
+                } catch (Exception $e) {
+                    // If table is missing or query fails, keep current donors from activity data
+                    $registeredCount = 0;
+                }
+
+                if ($registeredCount > $currentDonors) {
+                    $currentDonors = $registeredCount;
+                }
                 $targetDonors = $campaignData['target_donors'] ?? 100;
                 $progressPercentage = $targetDonors > 0 ? min(100, ($currentDonors / $targetDonors) * 100) : 0;
                 

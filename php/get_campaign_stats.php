@@ -91,15 +91,27 @@ try {
             // Pending campaigns is not really applicable - set to 0
             $pendingCampaigns = 0;
             
-            // Total participants (sum of current_donors from all campaigns)
-            $stmt = $pdo->query("
-                SELECT SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(ha.activity_data, '$.current_donors')) AS UNSIGNED))
-                FROM hospital_activities ha
-                JOIN hospitals h ON ha.hospital_id = h.id
-                WHERE ha.activity_type = 'campaign_created'
-                AND h.is_approved = 1
-            ");
-            $totalParticipants = $stmt->fetchColumn() ?: 0;
+            // Total participants (prefer campaign_registrations if available)
+            $totalParticipants = 0;
+            try {
+                $countStmt = $pdo->query(
+                    "SELECT COUNT(*) FROM campaign_registrations WHERE status IN ('registered','attended')"
+                );
+                $totalParticipants = (int)$countStmt->fetchColumn();
+            } catch (Exception $e) {
+                $totalParticipants = 0;
+            }
+
+            if ($totalParticipants === 0) {
+                $stmt = $pdo->query("
+                    SELECT SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(ha.activity_data, '$.current_donors')) AS UNSIGNED))
+                    FROM hospital_activities ha
+                    JOIN hospitals h ON ha.hospital_id = h.id
+                    WHERE ha.activity_type = 'campaign_created'
+                    AND h.is_approved = 1
+                ");
+                $totalParticipants = $stmt->fetchColumn() ?: 0;
+            }
             
             // Total donations (activities) in the last period
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM hospital_activities WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)");
