@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -483,7 +483,7 @@
         <div class="quick-actions">
           <div
             class="action-card"
-            onclick="window.location.href='manage_donors.html'"
+            onclick="window.location.href = 'manage_donors.html'"
           >
             <div class="action-icon donors">
               <i class="fas fa-users"></i>
@@ -494,7 +494,7 @@
 
           <div
             class="action-card"
-            onclick="window.location.href='update_status.html'"
+            onclick="window.location.href = 'update_status.html'"
           >
             <div class="action-icon inventory">
               <i class="fas fa-warehouse"></i>
@@ -505,7 +505,7 @@
 
           <div
             class="action-card"
-            onclick="window.location.href='emergency_dashboard.html'"
+            onclick="window.location.href = 'emergency_dashboard.html'"
           >
             <div class="action-icon requests">
               <i class="fas fa-exclamation-triangle"></i>
@@ -621,6 +621,10 @@
           loadBloodInventory();
           loadEmergencyAlerts();
         }, 60000); // Refresh every minute
+
+        setInterval(() => {
+          loadDonationTrends();
+        }, 60000);
       });
 
       function checkHospitalAuth() {
@@ -686,7 +690,7 @@
         grid.innerHTML = bloodTypes
           .map((bloodType) => {
             const item = inventory.find(
-              (inv) => inv.blood_type === bloodType
+              (inv) => inv.blood_type === bloodType,
             ) || { blood_type: bloodType, quantity: 0 };
 
             const units = item.quantity || 0;
@@ -697,8 +701,8 @@
                         <div class="blood-type-large">${bloodType}</div>
                         <div class="blood-units">${units} units</div>
                         <div class="blood-status status-${status.class}">${
-              status.label
-            }</div>
+                          status.label
+                        }</div>
                         ${
                           units < 10 && units > 0
                             ? '<i class="fas fa-exclamation-triangle text-warning"></i>'
@@ -733,13 +737,13 @@
           "Blood Type:",
           bloodType,
           "Units:",
-          units
+          units,
         );
 
         if (!bloodType || !units || units < 0) {
           Notifications.error(
             "Invalid Input",
-            "Please select a blood type and enter valid units"
+            "Please select a blood type and enter valid units",
           );
           return;
         }
@@ -763,11 +767,11 @@
                 action === "add"
                   ? "added"
                   : action === "remove"
-                  ? "removed"
-                  : "set to";
+                    ? "removed"
+                    : "set to";
               Notifications.success(
                 "Success",
-                `${bloodType} inventory ${actionText} ${units} units`
+                `${bloodType} inventory ${actionText} ${units} units`,
               );
               loadBloodInventory();
 
@@ -783,7 +787,7 @@
             console.error("Error updating inventory:", error);
             Notifications.error(
               "Error",
-              "Failed to update inventory: " + error.message
+              "Failed to update inventory: " + error.message,
             );
           });
       }
@@ -840,20 +844,20 @@
                                 <div class="d-flex w-100 justify-content-between">
                                     <div>
                                         <h6 class="mb-1">${Utils.escapeHtml(
-                                          donor.full_name
+                                          donor.full_name,
                                         )} (${donor.blood_type})</h6>
                                         <small>${Utils.escapeHtml(
-                                          donor.phone
+                                          donor.phone,
                                         )} • Last donation: ${
-                              donor.last_donation || "Never"
-                            }</small>
+                                          donor.last_donation || "Never"
+                                        }</small>
                                     </div>
                                     <small class="text-muted">${Utils.timeAgo(
-                                      donor.created_at
+                                      donor.created_at,
                                     )}</small>
                                 </div>
                             </div>
-                        `
+                        `,
                           )
                           .join("")}
                     </div>
@@ -873,14 +877,14 @@
         if (!query && !bloodType) {
           Notifications.warning(
             "Search Required",
-            "Please enter a search term or select a blood type"
+            "Please enter a search term or select a blood type",
           );
           return;
         }
 
         // Redirect to full search page
         window.location.href = `manage_donors.html?search=${encodeURIComponent(
-          query
+          query,
         )}&blood_type=${bloodType}`;
       }
 
@@ -916,13 +920,13 @@
                       alert.blood_type
                     } Blood Needed</strong>
                     <p>Patient: ${Utils.escapeHtml(
-                      alert.patient_name
+                      alert.patient_name,
                     )} • Units needed: ${alert.units_needed}</p>
                     <small>Requested: ${Utils.timeAgo(
-                      alert.created_at
+                      alert.created_at,
                     )} • Contact: ${Utils.escapeHtml(
-              alert.contact_phone
-            )}</small>
+                      alert.contact_phone,
+                    )}</small>
                     <div class="mt-2">
                         <button class="btn btn-success btn-sm" onclick="respondToRequest(${
                           alert.id
@@ -934,14 +938,14 @@
                         </button>
                     </div>
                 </div>
-            `
+            `,
           )
           .join("");
       }
 
       function updateEmergencyBadges(count) {
         const badges = document.querySelectorAll(
-          "#emergencyBadge, #requestsBadge"
+          "#emergencyBadge, #requestsBadge",
         );
         badges.forEach((badge) => {
           if (count > 0) {
@@ -979,22 +983,22 @@
             (activity) => `
                 <div class="activity-item">
                     <div class="activity-icon ${getActivityIconClass(
-                      activity.activity_type
+                      activity.activity_type,
                     )}">
                         <i class="fas fa-${getActivityIcon(
-                          activity.activity_type
+                          activity.activity_type,
                         )}"></i>
                     </div>
                     <div class="activity-content">
                         <div class="activity-text">${formatHospitalActivity(
-                          activity
+                          activity,
                         )}</div>
                         <small class="text-muted">${Utils.timeAgo(
-                          activity.created_at
+                          activity.created_at,
                         )}</small>
                     </div>
                 </div>
-            `
+            `,
           )
           .join("");
       }
@@ -1097,7 +1101,7 @@
                                     <td>${data.canGiveTo.join(", ")}</td>
                                     <td>${data.canReceiveFrom.join(", ")}</td>
                                 </tr>
-                            `
+                            `,
                               )
                               .join("")}
                         </tbody>
@@ -1191,18 +1195,53 @@
       }
 
       function loadDonationTrends() {
-        API.get("get_donation_trends.php", { days: 7 })
+        const params = { days: 7 };
+        if (currentHospitalId) {
+          params.hospital_id = currentHospitalId;
+        }
+
+        API.get("get_donation_trends.php", params)
           .then((response) => {
             if (response.success) {
-              const data = response.data;
-              donationChart.data.labels = data.labels || [];
-              donationChart.data.datasets[0].data = data.values || [];
+              const data = response.data || {};
+              const chartData = Array.isArray(data.chart_data)
+                ? data.chart_data
+                : [];
+              const fallback = buildDonationTrendFallback();
+              const labels = chartData.map(
+                (point) => point.date_formatted || point.date,
+              );
+              const values = chartData.map(
+                (point) => point.total_donations || 0,
+              );
+
+              donationChart.data.labels =
+                labels.length > 0 ? labels : fallback.labels;
+              donationChart.data.datasets[0].data =
+                values.length > 0 ? values : fallback.values;
               donationChart.update();
             }
           })
           .catch((error) => {
             console.error("Error loading donation trends:", error);
           });
+      }
+
+      function buildDonationTrendFallback() {
+        const labels = [];
+        const values = [];
+        for (let i = 6; i >= 0; i -= 1) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          labels.push(
+            date.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+          );
+          values.push(0);
+        }
+        return { labels, values };
       }
 
       function respondToRequest(requestId, status) {
@@ -1223,7 +1262,7 @@
             console.error("Error responding to request:", error);
             Notifications.error(
               "Error",
-              "Failed to send response: " + error.message
+              "Failed to send response: " + error.message,
             );
           });
       }
@@ -1265,11 +1304,11 @@
 
       function updateEmergencyStats(requests) {
         const criticalCount = requests.filter(
-          (r) => r.urgency === "critical"
+          (r) => r.urgency === "critical",
         ).length;
         const highCount = requests.filter((r) => r.urgency === "high").length;
         const otherCount = requests.filter(
-          (r) => r.urgency !== "critical" && r.urgency !== "high"
+          (r) => r.urgency !== "critical" && r.urgency !== "high",
         ).length;
 
         document.getElementById("emergencyRequestsCount").textContent =
@@ -1291,7 +1330,7 @@
         // Sort by urgency priority
         const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
         requests.sort(
-          (a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]
+          (a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency],
         );
 
         content.innerHTML = `
@@ -1317,11 +1356,11 @@
                   }" data-blood-type="${request.blood_type}">
                     <td>
                       <strong>${Utils.escapeHtml(
-                        request.patient_name || "Anonymous"
+                        request.patient_name || "Anonymous",
                       )}</strong>
                       <br><small class="text-muted">
                         <i class="fas fa-hospital"></i> ${Utils.escapeHtml(
-                          request.hospital_name || "Unknown Hospital"
+                          request.hospital_name || "Unknown Hospital",
                         )}
                       </small>
                     </td>
@@ -1335,16 +1374,16 @@
                     </td>
                     <td>
                       <span class="badge badge-${getUrgencyBadgeClass(
-                        request.urgency
+                        request.urgency,
                       )}">
                         ${getUrgencyIcon(
-                          request.urgency
+                          request.urgency,
                         )} ${request.urgency.toUpperCase()}
                       </span>
                     </td>
                     <td>
                       <small>${formatRequestTime(
-                        request.created_at || new Date()
+                        request.created_at || new Date(),
                       )}</small>
                     </td>
                     <td>
@@ -1361,7 +1400,7 @@
                         </a>
                       </div>
                       <small class="d-block text-muted">${Utils.escapeHtml(
-                        request.contact_phone || "N/A"
+                        request.contact_phone || "N/A",
                       )}</small>
                     </td>
                     <td>
@@ -1384,7 +1423,7 @@
                       </div>
                     </td>
                   </tr>
-                `
+                `,
                   )
                   .join("")}
               </tbody>
@@ -1435,7 +1474,7 @@
           "Respond to Emergency Request",
           `Are you sure you want to respond as: <strong>${status.toUpperCase()}</strong>?<br><small>${
             statusMessages[status]
-          }</small>`
+          }</small>`,
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("respond_emergency_request.php", {
@@ -1447,12 +1486,12 @@
                 if (response.success) {
                   Notifications.success(
                     "Response Sent",
-                    "Your response has been sent to the requesting hospital."
+                    "Your response has been sent to the requesting hospital.",
                   );
                   refreshEmergencyRequests();
                 } else {
                   throw new Error(
-                    response.message || "Failed to send response"
+                    response.message || "Failed to send response",
                   );
                 }
               })
@@ -1460,7 +1499,7 @@
                 console.error("Error responding to request:", error);
                 Notifications.error(
                   "Error",
-                  "Failed to send response: " + error.message
+                  "Failed to send response: " + error.message,
                 );
               });
           }
@@ -1499,7 +1538,7 @@
       function logout() {
         Notifications.confirm(
           "Logout",
-          "Are you sure you want to logout?"
+          "Are you sure you want to logout?",
         ).then((result) => {
           if (result.isConfirmed) {
             Session.logout()
