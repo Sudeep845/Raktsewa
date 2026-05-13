@@ -1172,14 +1172,12 @@
                     <i class="fas fa-hospital"></i> ${hospital.hospital_name}
                   </div>
                   <p class="mb-1 text-muted small">
-                    <i class="fas fa-map-marker-alt"></i> ${
-                      hospital.address
-                    }, ${hospital.city}
+                    <i class="fas fa-map-marker-alt"></i> ${hospital.address}, ${hospital.city}
                   </p>
                   <p class="mb-2 text-muted small">
                     <i class="fas fa-phone"></i> ${
                       hospital.contact_phone || "N/A"
-                    } • 
+                    } •
                     <i class="fas fa-envelope"></i> ${hospital.email || "N/A"}
                   </p>
                 </div>
@@ -1189,7 +1187,7 @@
                   <i class="fas fa-calendar-plus"></i> Book
                 </button>
               </div>
-              
+
               <div class="mt-3">
                 <strong class="text-muted small">Blood Availability:</strong>
                 <div class="blood-inventory-grid">
@@ -1234,17 +1232,20 @@
                     (campaign.current_donors / campaign.target_donors) * 100,
                   )
                 : 0;
+            const isEnded = isCampaignEnded(campaign);
+            const badgeText = isEnded ? "ENDED" : "ACTIVE";
+            const daysText = isEnded
+              ? "Campaign ended"
+              : `${campaign.days_remaining} days left`;
 
             return `
             <div class="campaign-card">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
-                  <span class="campaign-badge">ACTIVE</span>
+                  <span class="campaign-badge">${badgeText}</span>
                   <h6 class="mt-2 mb-0">${campaign.title}</h6>
                 </div>
-                <span class="badge badge-info">${
-                  campaign.days_remaining
-                } days left</span>
+                <span class="badge badge-info">${daysText}</span>
               </div>
               <p class="small text-muted mb-2">
                 <i class="fas fa-hospital"></i> ${campaign.hospital_name}<br>
@@ -1259,16 +1260,37 @@
                     campaign.target_donors || 100
                   } donors
                 </small>
-                <button class="btn btn-sm btn-success" onclick="joinCampaign(${
-                  campaign.id
-                })">
+                ${
+                  isEnded
+                    ? '<span class="text-muted"><i class="fas fa-flag-checkered"></i> Campaign ended</span>'
+                    : `<button class="btn btn-sm btn-success" onclick="joinCampaign(${campaign.id})">
                   <i class="fas fa-plus"></i> Join
-                </button>
+                </button>`
+                }
               </div>
             </div>
           `;
           })
           .join("");
+      }
+
+      function isCampaignEnded(campaign) {
+        if (campaign.status === "completed" || campaign.status === "ended") {
+          return true;
+        }
+
+        if (typeof campaign.days_remaining === "number") {
+          return campaign.days_remaining <= 0;
+        }
+
+        if (campaign.end_date) {
+          const endDate = new Date(campaign.end_date);
+          if (!Number.isNaN(endDate.getTime())) {
+            return endDate < new Date();
+          }
+        }
+
+        return false;
       }
 
       function displaySystemAlerts(alerts) {
@@ -1689,7 +1711,7 @@
                         <div class="campaign-meta">
                             <i class="fas fa-map-marker-alt"></i> ${Utils.escapeHtml(
                               campaign.location,
-                            )} • 
+                            )} •
                             <i class="fas fa-calendar"></i> ${Utils.formatDate(
                               campaign.start_date,
                             )}
@@ -1804,7 +1826,7 @@
                     <label for="specialRequests">
                       <i class="fas fa-comment"></i> Special Requests or Notes
                     </label>
-                    <textarea class="form-control" id="specialRequests" rows="3" 
+                    <textarea class="form-control" id="specialRequests" rows="3"
                               placeholder="Any special requirements or medical notes..."></textarea>
                   </div>
                   <div class="alert alert-info">
@@ -1992,7 +2014,7 @@
                               userData.postal_code || "Not provided",
                             )}</td></tr>
                         </table>
-                        
+
                         <h6 class="mt-3"><i class="fas fa-info-circle"></i> Account Information</h6>
                         <table class="table table-sm">
                             <tr><td><strong>Member Since:</strong></td><td>${Utils.formatDate(
@@ -2049,7 +2071,7 @@
                     <i class="fas fa-plus"></i> New Appointment
                   </button>
                 </div>
-                
+
                 <div class="row mb-4">
                   <div class="col-md-3">
                     <div class="card text-center">
@@ -2084,7 +2106,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <ul class="nav nav-tabs mb-3" role="tablist">
                   <li class="nav-item">
                     <a class="nav-link active" data-toggle="tab" href="#upcoming-appointments">
@@ -2097,7 +2119,7 @@
                     </a>
                   </li>
                 </ul>
-                
+
                 <div class="tab-content">
                   <div class="tab-pane fade show active" id="upcoming-appointments">
                     <div class="appointment-list" id="upcomingAppointmentsList">
