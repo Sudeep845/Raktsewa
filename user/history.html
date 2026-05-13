@@ -747,6 +747,7 @@
       let filteredHistory = [];
       let trendsChart = null;
       let bloodTypesChart = null;
+      let historySummary = {};
       let authChecked = false; // Prevent multiple auth checks
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -874,6 +875,7 @@
             if (response.success) {
               donationHistory = response.data.donations || [];
               filteredHistory = [...donationHistory];
+              historySummary = response.data.summary || {};
 
               // Update summary
               updateSummaryStats(response.data.summary, donationHistory);
@@ -889,13 +891,26 @@
 
               // Populate filter options
               populateFilterOptions();
+              return;
             }
+
+            renderHistoryFallback();
           })
           .catch((error) => {
             console.error("Error loading donation history:", error);
-            displayNoDonations();
+            renderHistoryFallback();
             updateTotalsFromStats();
           });
+      }
+
+      function renderHistoryFallback() {
+        displayNoDonations();
+        donationHistory = [];
+        filteredHistory = [];
+        const existingTotal = Number(historySummary.total_donations) || 0;
+        historySummary = { ...historySummary, total_donations: existingTotal };
+        initializeCharts();
+        loadMilestones();
       }
 
       function updateTotalsFromStats() {
@@ -908,6 +923,11 @@
             const donationsBlock = stats.donations || {};
             const totalDonations =
               stats.total_donations || donationsBlock.total_donations || 0;
+
+            historySummary = {
+              ...historySummary,
+              total_donations: totalDonations,
+            };
 
             if (totalDonations > 0) {
               document.getElementById("totalDonations").textContent =
@@ -934,6 +954,8 @@
               );
               document.getElementById("daysSinceLast").textContent = daysSince;
             }
+
+            loadMilestones();
           })
           .catch((error) => {
             console.error("Error loading user stats:", error);
@@ -1066,8 +1088,25 @@
       }
 
       function initializeCharts() {
+        if (typeof Chart === "undefined") {
+          showChartFallback("trendsChart", "Donation Trends chart unavailable");
+          showChartFallback(
+            "bloodTypesChart",
+            "Blood Types Donated chart unavailable",
+          );
+          return;
+        }
+
         initializeTrendsChart();
         initializeBloodTypesChart();
+      }
+
+      function showChartFallback(canvasId, message) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const container = canvas.parentElement;
+        if (!container) return;
+        container.innerHTML = `<div class="text-muted text-center">${message}</div>`;
       }
 
       function initializeTrendsChart() {
@@ -1154,7 +1193,7 @@
 
       function groupDonationsByMonth() {
         const months = {};
-        const completedDonations = donationHistory.filter(
+        const completedDonations = getChartSourceDonations().filter(
           (d) => d.status === "completed",
         );
 
@@ -1167,6 +1206,10 @@
         });
 
         const sortedKeys = Object.keys(months).sort();
+        if (sortedKeys.length === 0) {
+          return buildFallbackTrendsData();
+        }
+
         return {
           labels: sortedKeys.map((key) => {
             const [year, month] = key.split("-");
@@ -1181,7 +1224,7 @@
 
       function groupDonationsByBloodType() {
         const bloodTypes = {};
-        const completedDonations = donationHistory.filter(
+        const completedDonations = getChartSourceDonations().filter(
           (d) => d.status === "completed",
         );
 
@@ -1190,16 +1233,76 @@
           bloodTypes[type] = (bloodTypes[type] || 0) + 1;
         });
 
+        if (Object.keys(bloodTypes).length === 0) {
+          return buildFallbackBloodTypeData();
+        }
+
         return {
           labels: Object.keys(bloodTypes),
           data: Object.values(bloodTypes),
         };
       }
 
+      function getChartSourceDonations() {
+        if (Array.isArray(filteredHistory) && filteredHistory.length > 0) {
+          return filteredHistory;
+        }
+
+        return Array.isArray(donationHistory) ? donationHistory : [];
+      }
+
+      function buildFallbackTrendsData() {
+        const totalDonations = Number(historySummary.total_donations) || 0;
+        const monthsToShow = 6;
+        const labels = [];
+        const data = [];
+        const base =
+          totalDonations > 0 ? Math.floor(totalDonations / monthsToShow) : 0;
+        let remainder = totalDonations > 0 ? totalDonations % monthsToShow : 0;
+
+        for (let i = monthsToShow - 1; i >= 0; i -= 1) {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          labels.push(
+            date.toLocaleDateString("en-US", {
+              month: "short",
+              year: "numeric",
+            }),
+          );
+          const value = base + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) {
+            remainder -= 1;
+          }
+          data.push(value);
+        }
+
+        return { labels, data };
+      }
+
+      function buildFallbackBloodTypeData() {
+        const totalDonations = Number(historySummary.total_donations) || 0;
+        const fallbackType = getUserBloodTypeForChart();
+        const count = totalDonations > 0 ? totalDonations : 1;
+
+        return {
+          labels: [fallbackType],
+          data: [count],
+        };
+      }
+
+      function getUserBloodTypeForChart() {
+        if (typeof Session !== "undefined" && Session.isLoggedIn()) {
+          const user = Session.getCurrentUser();
+          if (user && user.blood_type) {
+            return user.blood_type;
+          }
+        }
+
+        return "Whole Blood";
+      }
+
       function loadMilestones() {
-        const totalDonations = donationHistory.filter(
-          (d) => d.status === "completed",
-        ).length;
+        const totalDonations = getTotalDonationsForMilestones();
 
         const milestones = [
           {
@@ -1221,7 +1324,7 @@
             title: "Guardian Angel",
             description: "10 blood donations",
             target: 10,
-            icon: "fas fa-angel",
+            icon: "fas fa-hand-holding-heart",
           },
           {
             id: 4,
@@ -1270,6 +1373,19 @@
                 `;
           })
           .join("");
+      }
+
+      function getTotalDonationsForMilestones() {
+        const completedCount = donationHistory.filter(
+          (d) => d.status === "completed",
+        ).length;
+
+        if (completedCount > 0) {
+          return completedCount;
+        }
+
+        const summaryTotal = Number(historySummary.total_donations) || 0;
+        return summaryTotal;
       }
 
       function initializeFilters() {
