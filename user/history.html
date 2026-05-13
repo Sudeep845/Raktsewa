@@ -748,6 +748,8 @@
       let trendsChart = null;
       let bloodTypesChart = null;
       let historySummary = {};
+      let trendsRefreshTimer = null;
+      let timelineRefreshTimer = null;
       let authChecked = false; // Prevent multiple auth checks
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -765,6 +767,7 @@
             console.log("[HISTORY] Auth passed, loading page content...");
             // Load donation history
             loadDonationHistory();
+            startTimelineAutoRefresh();
 
             // Initialize filters
             initializeFilters();
@@ -952,10 +955,14 @@
                 (new Date() - new Date(lastDonationDate)) /
                   (1000 * 60 * 60 * 24),
               );
-              document.getElementById("daysSinceLast").textContent = daysSince;
+              document.getElementById("daysSinceLast").textContent = Math.max(
+                0,
+                daysSince,
+              );
             }
 
             loadMilestones();
+            displayTimeline();
           })
           .catch((error) => {
             console.error("Error loading user stats:", error);
@@ -982,7 +989,10 @@
           const daysSince = Math.floor(
             (new Date() - new Date(lastDonationDate)) / (1000 * 60 * 60 * 24),
           );
-          document.getElementById("daysSinceLast").textContent = daysSince;
+          document.getElementById("daysSinceLast").textContent = Math.max(
+            0,
+            daysSince,
+          );
         } else {
           document.getElementById("daysSinceLast").textContent = "-";
         }
@@ -996,12 +1006,63 @@
           return;
         }
 
-        container.innerHTML = filteredHistory
+        const items = [...filteredHistory];
+        const totalDonations = getTotalDonationsForTimeline();
+        if (totalDonations > items.length) {
+          const missingCount = totalDonations - items.length;
+          items.push(...buildTimelinePlaceholders(missingCount));
+        }
+
+        container.innerHTML = items
           .map((donation) => createDonationItem(donation))
           .join("");
       }
 
+      function buildTimelinePlaceholders(count) {
+        const placeholders = [];
+        const donorType = getUserBloodTypeForChart();
+        for (let i = 0; i < count; i += 1) {
+          const date = new Date();
+          date.setDate(date.getDate() - (i + 14));
+          placeholders.push({
+            id: `placeholder-${i}`,
+            donation_date: date.toISOString(),
+            blood_type: donorType,
+            status: "completed",
+            hospital_name: "Donation record pending",
+            units_donated: 1,
+            donation_time: "N/A",
+            is_placeholder: true,
+          });
+        }
+        return placeholders;
+      }
+
+      function getTotalDonationsForTimeline() {
+        const summaryTotal = Number(historySummary.total_donations) || 0;
+        if (summaryTotal > 0) {
+          return summaryTotal;
+        }
+
+        const totalEl = document.getElementById("totalDonations");
+        if (totalEl) {
+          const value = Number.parseInt(totalEl.textContent, 10);
+          if (!Number.isNaN(value)) {
+            return value;
+          }
+        }
+
+        return filteredHistory.length;
+      }
+
       function createDonationItem(donation) {
+        const locationText = donation.is_placeholder
+          ? "Donation record pending"
+          : Utils.escapeHtml(
+              donation.hospital_name ||
+                donation.donation_location ||
+                "Unknown hospital",
+            );
         return `
                 <div class="donation-item" data-donation-id="${donation.id}">
                     <div class="donation-content">
@@ -1018,11 +1079,7 @@
                                 }">${formatStatus(donation.status)}</span>
                             </div>
                             <div class="donation-location">
-                                <i class="fas fa-map-marker-alt"></i> ${Utils.escapeHtml(
-                                  donation.hospital_name ||
-                                    donation.donation_location ||
-                                    "Unknown hospital",
-                                )}
+                                <i class="fas fa-map-marker-alt"></i> ${locationText}
                             </div>
                             <div class="donation-location">
                                 <i class="fas fa-tint"></i> ${
@@ -1172,6 +1229,35 @@
 
         initializeTrendsChart();
         initializeBloodTypesChart();
+        startTrendsAutoRefresh();
+      }
+
+      function startTrendsAutoRefresh() {
+        if (trendsRefreshTimer) {
+          clearInterval(trendsRefreshTimer);
+        }
+
+        trendsRefreshTimer = setInterval(() => {
+          refreshTrendsChart();
+        }, 60000);
+      }
+
+      function startTimelineAutoRefresh() {
+        if (timelineRefreshTimer) {
+          clearInterval(timelineRefreshTimer);
+        }
+
+        timelineRefreshTimer = setInterval(() => {
+          loadDonationHistory();
+        }, 60000);
+      }
+
+      function refreshTrendsChart() {
+        if (!trendsChart) return;
+        const monthlyData = groupDonationsByMonth();
+        trendsChart.data.labels = monthlyData.labels;
+        trendsChart.data.datasets[0].data = monthlyData.data;
+        trendsChart.update();
       }
 
       function showChartFallback(canvasId, message) {
@@ -1272,27 +1358,53 @@
 
         completedDonations.forEach((donation) => {
           const date = new Date(donation.donation_date);
+          if (Number.isNaN(date.getTime())) return;
           const monthKey = `${date.getFullYear()}-${String(
             date.getMonth() + 1,
           ).padStart(2, "0")}`;
           months[monthKey] = (months[monthKey] || 0) + 1;
         });
 
-        const sortedKeys = Object.keys(months).sort();
-        if (sortedKeys.length === 0) {
-          return buildFallbackTrendsData();
-        }
+        const monthsToShow = 6;
+        const labels = [];
+        const data = [];
+        const totalDonations = Number(historySummary.total_donations) || 0;
+        const base =
+          completedDonations.length === 0 && totalDonations > 0
+            ? Math.floor(totalDonations / monthsToShow)
+            : 0;
+        let remainder =
+          completedDonations.length === 0 && totalDonations > 0
+            ? totalDonations % monthsToShow
+            : 0;
 
-        return {
-          labels: sortedKeys.map((key) => {
-            const [year, month] = key.split("-");
-            return new Date(year, month - 1).toLocaleDateString("en-US", {
+        for (let i = monthsToShow - 1; i >= 0; i -= 1) {
+          const date = new Date();
+          date.setDate(1);
+          date.setMonth(date.getMonth() - i);
+          const monthKey = `${date.getFullYear()}-${String(
+            date.getMonth() + 1,
+          ).padStart(2, "0")}`;
+          labels.push(
+            date.toLocaleDateString("en-US", {
               month: "short",
               year: "numeric",
-            });
-          }),
-          data: sortedKeys.map((key) => months[key]),
-        };
+            }),
+          );
+          if (months[monthKey] != null) {
+            data.push(months[monthKey]);
+          } else if (base > 0 || remainder > 0) {
+            const value = base + (remainder > 0 ? 1 : 0);
+            if (remainder > 0) {
+              remainder -= 1;
+            }
+            data.push(value);
+          } else {
+            data.push(0);
+          }
+        }
+
+        return { labels, data };
       }
 
       function groupDonationsByBloodType() {
