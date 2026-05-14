@@ -1163,22 +1163,30 @@
               "O+",
               "O-",
             ];
+            const locationText = formatHospitalLocation(hospital);
+            const phoneText = hospital.contact_phone || hospital.phone || "N/A";
+            const emailText = formatHospitalEmail(hospital);
+            const emailMarkup = ` • <i class="fas fa-envelope"></i> ${escapeHtml(
+              emailText,
+            )}`;
 
             return `
             <div class="hospital-card">
               <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                   <div class="hospital-name">
-                    <i class="fas fa-hospital"></i> ${hospital.hospital_name}
+                    <i class="fas fa-hospital"></i> ${escapeHtml(
+                      hospital.hospital_name,
+                    )}
                   </div>
                   <p class="mb-1 text-muted small">
-                    <i class="fas fa-map-marker-alt"></i> ${hospital.address}, ${hospital.city}
+                    <i class="fas fa-map-marker-alt"></i> ${escapeHtml(
+                      locationText,
+                    )}
                   </p>
                   <p class="mb-2 text-muted small">
-                    <i class="fas fa-phone"></i> ${
-                      hospital.contact_phone || "N/A"
-                    } •
-                    <i class="fas fa-envelope"></i> ${hospital.email || "N/A"}
+                    <i class="fas fa-phone"></i> ${escapeHtml(phoneText)}
+                    ${emailMarkup}
                   </p>
                 </div>
                 <button class="btn btn-sm btn-primary" onclick="scheduleHospitalAppointment(${
@@ -1214,6 +1222,36 @@
           `;
           })
           .join("");
+      }
+
+      function formatHospitalLocation(hospital) {
+        const address = (hospital.address || "").trim();
+        const city = (hospital.city || "").trim();
+
+        if (!address && !city) {
+          return "Location not specified";
+        }
+
+        if (address && city) {
+          if (address.toLowerCase() === city.toLowerCase()) {
+            return city;
+          }
+          return `${address}, ${city}`;
+        }
+
+        return address || city;
+      }
+
+      function formatHospitalEmail(hospital) {
+        const email = (hospital.email || "").trim();
+        return email || "N/A";
+      }
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
       }
 
       function displayActiveCampaigns(campaigns) {

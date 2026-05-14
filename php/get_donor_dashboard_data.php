@@ -106,7 +106,7 @@ try {
                 h.city,
                 h.state,
                 h.contact_phone,
-                h.email,
+                COALESCE(NULLIF(h.email, ''), NULLIF(h.contact_email, '')) AS email,
                 h.latitude,
                 h.longitude,
                 (
