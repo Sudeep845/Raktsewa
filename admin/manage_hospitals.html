@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -858,50 +858,61 @@
         }
 
         tbody.innerHTML = hospitals
-          .map(
-            (hospital) => `
+          .map((hospital) => {
+            const email =
+              hospital.contact_email ||
+              hospital.email ||
+              hospital.user_email ||
+              "N/A";
+            const phone =
+              hospital.contact_phone ||
+              hospital.phone ||
+              hospital.user_phone ||
+              "N/A";
+
+            return `
                 <tr>
                     <td>
                         <div style="font-weight: 500;">${Utils.escapeHtml(
-                          hospital.hospital_name
+                          hospital.hospital_name,
                         )}</div>
                         <small class="text-muted">${Utils.escapeHtml(
-                          hospital.hospital_type || "General Hospital"
+                          hospital.hospital_type || "General Hospital",
                         )}</small>
                     </td>
                     <td>
                         <div><i class="fas fa-envelope"></i> ${Utils.escapeHtml(
-                          hospital.email
+                          email,
                         )}</div>
                         <div><i class="fas fa-phone"></i> ${Utils.escapeHtml(
-                          hospital.phone
+                          phone,
                         )}</div>
                     </td>
                     <td>
                         <div>${Utils.escapeHtml(hospital.address)}</div>
                         <small class="text-muted">${Utils.escapeHtml(
-                          hospital.city
+                          hospital.city,
                         )}, ${Utils.escapeHtml(hospital.state)}</small>
                     </td>
                     <td>
                         <div>${Utils.formatDate(hospital.created_at)}</div>
                         <small class="text-muted">${Utils.timeAgo(
-                          hospital.created_at
+                          hospital.created_at,
                         )}</small>
                     </td>
                     <td>
                         <span class="status-badge status-${hospital.status}">${
-              hospital.status
-            }</span>
+                          hospital.status
+                        }</span>
                         ${
                           hospital.verification_status
                             ? `
                             <div class="verification-status">
                                 <div class="verification-icon ${getVerificationClass(
-                                  hospital.verification_status
+                                  hospital.verification_status,
                                 )}">
                                     <i class="fas fa-${getVerificationIcon(
-                                      hospital.verification_status
+                                      hospital.verification_status,
                                     )}"></i>
                                 </div>
                                 <small>${hospital.verification_status}</small>
@@ -921,8 +932,8 @@
                         </div>
                     </td>
                 </tr>
-            `
-          )
+                `;
+          })
           .join("");
       }
 
@@ -1013,9 +1024,8 @@
       }
 
       function updateResultsCount(total) {
-        document.getElementById(
-          "resultsCount"
-        ).textContent = `${total} hospital${total !== 1 ? "s" : ""} found`;
+        document.getElementById("resultsCount").textContent =
+          `${total} hospital${total !== 1 ? "s" : ""} found`;
       }
 
       function applyFilters() {
@@ -1055,25 +1065,25 @@
                         <div class="detail-item">
                             <div class="detail-label">Hospital Name</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.hospital_name
+                              hospital.hospital_name,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Hospital Type</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.hospital_type || "General Hospital"
+                              hospital.hospital_type || "General Hospital",
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">License Number</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.license_number || "N/A"
+                              hospital.license_number || "N/A",
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Hospital Type</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.hospital_type || "General"
+                              hospital.hospital_type || "General",
                             )}</div>
                         </div>
                     </div>
@@ -1085,25 +1095,25 @@
                         <div class="detail-item">
                             <div class="detail-label">Address</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.address
+                              hospital.address,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">City</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.city
+                              hospital.city,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">State</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.state
+                              hospital.state,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Postal Code</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.postal_code || "N/A"
+                              hospital.postal_code || "N/A",
                             )}</div>
                         </div>
                     </div>
@@ -1115,25 +1125,25 @@
                         <div class="detail-item">
                             <div class="detail-label">Contact Person</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.full_name
+                              hospital.full_name,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Email</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.email
+                              hospital.email,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Phone</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.phone
+                              hospital.phone,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Emergency Contact</div>
                             <div class="detail-value">${Utils.escapeHtml(
-                              hospital.emergency_contact || "N/A"
+                              hospital.emergency_contact || "N/A",
                             )}</div>
                         </div>
                     </div>
@@ -1155,10 +1165,10 @@
                             <div class="detail-value">
                                 <div class="verification-status">
                                     <div class="verification-icon ${getVerificationClass(
-                                      hospital.verification_status
+                                      hospital.verification_status,
                                     )}">
                                         <i class="fas fa-${getVerificationIcon(
-                                          hospital.verification_status
+                                          hospital.verification_status,
                                         )}"></i>
                                     </div>
                                     <span>${
@@ -1170,13 +1180,13 @@
                         <div class="detail-item">
                             <div class="detail-label">Registration Date</div>
                             <div class="detail-value">${Utils.formatDate(
-                              hospital.created_at
+                              hospital.created_at,
                             )}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Last Updated</div>
                             <div class="detail-value">${Utils.formatDate(
-                              hospital.updated_at
+                              hospital.updated_at,
                             )}</div>
                         </div>
                     </div>
@@ -1194,10 +1204,10 @@
                             <li class="document-item">
                                 <div class="document-info">
                                     <div class="document-name">${Utils.escapeHtml(
-                                      doc.document_type
+                                      doc.document_type,
                                     )}</div>
                                     <div class="document-meta">Uploaded: ${Utils.formatDate(
-                                      doc.uploaded_at
+                                      doc.uploaded_at,
                                     )}</div>
                                 </div>
                                 <div>
@@ -1208,7 +1218,7 @@
                                     </button>
                                 </div>
                             </li>
-                        `
+                        `,
                           )
                           .join("")}
                     </ul>
@@ -1257,7 +1267,7 @@
           "Approve Hospital",
           "Are you sure you want to approve this hospital registration?",
           "Yes, Approve",
-          "success"
+          "success",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_hospital_status.php", {
@@ -1269,7 +1279,7 @@
                 if (response.success) {
                   Notifications.success(
                     "Success",
-                    "Hospital has been approved successfully"
+                    "Hospital has been approved successfully",
                   );
                   loadHospitals(currentPage);
                   $("#hospitalDetailsModal").modal("hide");
@@ -1281,7 +1291,7 @@
                 console.error("Error approving hospital:", error);
                 Notifications.error(
                   "Error",
-                  "Failed to approve hospital: " + error.message
+                  "Failed to approve hospital: " + error.message,
                 );
               });
           }
@@ -1292,7 +1302,7 @@
         Notifications.prompt(
           "Reject Hospital",
           "Please provide a reason for rejection:",
-          "textarea"
+          "textarea",
         ).then((result) => {
           if (result.isConfirmed && result.value) {
             API.post("update_hospital_status.php", {
@@ -1305,7 +1315,7 @@
                 if (response.success) {
                   Notifications.success(
                     "Success",
-                    "Hospital has been rejected"
+                    "Hospital has been rejected",
                   );
                   loadHospitals(currentPage);
                   $("#hospitalDetailsModal").modal("hide");
@@ -1317,7 +1327,7 @@
                 console.error("Error rejecting hospital:", error);
                 Notifications.error(
                   "Error",
-                  "Failed to reject hospital: " + error.message
+                  "Failed to reject hospital: " + error.message,
                 );
               });
           }
@@ -1328,7 +1338,7 @@
         Notifications.prompt(
           "Suspend Hospital",
           "Please provide a reason for suspension:",
-          "textarea"
+          "textarea",
         ).then((result) => {
           if (result.isConfirmed && result.value) {
             API.post("update_hospital_status.php", {
@@ -1341,7 +1351,7 @@
                 if (response.success) {
                   Notifications.success(
                     "Success",
-                    "Hospital has been suspended"
+                    "Hospital has been suspended",
                   );
                   loadHospitals(currentPage);
                   $("#hospitalDetailsModal").modal("hide");
@@ -1353,7 +1363,7 @@
                 console.error("Error suspending hospital:", error);
                 Notifications.error(
                   "Error",
-                  "Failed to suspend hospital: " + error.message
+                  "Failed to suspend hospital: " + error.message,
                 );
               });
           }
@@ -1365,7 +1375,7 @@
           "Reactivate Hospital",
           "Are you sure you want to reactivate this hospital?",
           "Yes, Reactivate",
-          "success"
+          "success",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_hospital_status.php", {
@@ -1377,7 +1387,7 @@
                 if (response.success) {
                   Notifications.success(
                     "Success",
-                    "Hospital has been reactivated"
+                    "Hospital has been reactivated",
                   );
                   loadHospitals(currentPage);
                   $("#hospitalDetailsModal").modal("hide");
@@ -1389,7 +1399,7 @@
                 console.error("Error reactivating hospital:", error);
                 Notifications.error(
                   "Error",
-                  "Failed to reactivate hospital: " + error.message
+                  "Failed to reactivate hospital: " + error.message,
                 );
               });
           }
@@ -1423,7 +1433,7 @@
 
               Notifications.success(
                 "Success",
-                "Hospital data exported successfully"
+                "Hospital data exported successfully",
               );
             } else {
               throw new Error(response.message);
@@ -1565,9 +1575,8 @@
       }
 
       function updateUsersCount(total) {
-        document.getElementById(
-          "usersCount"
-        ).textContent = `Total: ${total} users`;
+        document.getElementById("usersCount").textContent =
+          `Total: ${total} users`;
       }
 
       function updateUsersPagination(pagination) {
@@ -1613,21 +1622,21 @@
       function viewUserDetails(userId) {
         Notifications.info(
           "User Details",
-          "User details feature will be implemented soon!"
+          "User details feature will be implemented soon!",
         );
       }
 
       function editUser(userId) {
         Notifications.info(
           "Edit User",
-          "User editing feature will be implemented soon!"
+          "User editing feature will be implemented soon!",
         );
       }
 
       function activateUser(userId) {
         Notifications.confirm(
           "Activate User",
-          "Are you sure you want to activate this user?"
+          "Are you sure you want to activate this user?",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_user_status.php", {
@@ -1648,7 +1657,7 @@
       function deactivateUser(userId) {
         Notifications.confirm(
           "Deactivate User",
-          "Are you sure you want to deactivate this user?"
+          "Are you sure you want to deactivate this user?",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_user_status.php", {
@@ -1658,7 +1667,7 @@
               if (response.success) {
                 Notifications.success(
                   "Success",
-                  "User deactivated successfully"
+                  "User deactivated successfully",
                 );
                 loadUsers(currentUsersPage);
               } else {
@@ -1672,14 +1681,14 @@
       function exportUsers() {
         Notifications.info(
           "Export Users",
-          "Users export feature will be implemented soon!"
+          "Users export feature will be implemented soon!",
         );
       }
 
       function showReportsModal() {
         Notifications.info(
           "Reports & Analytics",
-          "Advanced reporting feature coming soon!"
+          "Advanced reporting feature coming soon!",
         );
       }
 
@@ -1710,7 +1719,7 @@
       function logout() {
         Notifications.confirm(
           "Logout",
-          "Are you sure you want to logout?"
+          "Are you sure you want to logout?",
         ).then((result) => {
           if (result.isConfirmed) {
             Session.logout()
