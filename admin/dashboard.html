@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -761,14 +761,14 @@
                   (alert) => `
                             <div class="alert-item alert-${alert.type}">
                                 <strong><i class="fas fa-${getAlertIcon(
-                                  alert.type
+                                  alert.type,
                                 )}"></i> ${alert.title}</strong>
                                 <p>${alert.message}</p>
                                 <small>${Utils.timeAgo(
-                                  alert.created_at
+                                  alert.created_at,
                                 )}</small>
                             </div>
-                        `
+                        `,
                 )
                 .join("");
             } else {
@@ -793,7 +793,7 @@
         API.get("get_recent_activities.php?limit=10")
           .then((response) => {
             if (response.success) {
-              const activities = response.data;
+              const activities = normalizeRecentActivities(response.data);
 
               if (activities.length === 0) {
                 activitiesContainer.innerHTML =
@@ -806,22 +806,22 @@
                   (activity) => `
                             <div class="activity-item">
                                 <div class="activity-icon ${getActivityIconClass(
-                                  activity.action
+                                  activity.action,
                                 )}">
                                     <i class="fas fa-${getActivityIcon(
-                                      activity.action
+                                      activity.action,
                                     )}"></i>
                                 </div>
                                 <div class="activity-content">
                                     <div class="activity-text">${formatActivityText(
-                                      activity
+                                      activity,
                                     )}</div>
-                                    <small class="text-muted">${Utils.timeAgo(
-                                      activity.created_at
+                                    <small class="text-muted">${formatActivityTime(
+                                      activity.created_at,
                                     )}</small>
                                 </div>
                             </div>
-                        `
+                        `,
                 )
                 .join("");
             } else {
@@ -836,9 +836,50 @@
           });
       }
 
+      function normalizeRecentActivities(data) {
+        if (!Array.isArray(data)) return [];
+
+        return data.map((activity) => {
+          const action = activity.action || activity.type || "system";
+          const fullName =
+            activity.full_name || activity.user || "Unknown User";
+          const role = activity.role || inferActivityRole(activity, action);
+          const details =
+            activity.details || activity.description || activity.title;
+          const createdAt = activity.created_at || activity.timestamp;
+
+          return {
+            action,
+            full_name: fullName,
+            role,
+            details,
+            created_at: createdAt,
+          };
+        });
+      }
+
+      function inferActivityRole(activity, action) {
+        if (activity.role) return activity.role;
+        if (action.includes("hospital")) return "hospital";
+        if (action.includes("admin")) return "admin";
+        return "user";
+      }
+
+      function formatActivityTime(dateString) {
+        if (!dateString) return "Just now";
+        if (window.Utils && typeof Utils.timeAgo === "function") {
+          const formatted = Utils.timeAgo(dateString);
+          return formatted || "Just now";
+        }
+
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return "Just now";
+        return date.toLocaleString();
+      }
+
       function loadBloodInventory() {
         const inventoryContainer = document.getElementById(
-          "bloodInventoryOverview"
+          "bloodInventoryOverview",
         );
         if (!inventoryContainer) return;
 
@@ -862,7 +903,7 @@
                                   item.hospitals_count || 0
                                 } hospitals</small>
                             </div>
-                        `
+                        `,
                 )
                 .join("");
             }
@@ -1010,7 +1051,7 @@
                     const value = context.parsed || 0;
                     const total = context.dataset.data.reduce(
                       (a, b) => a + b,
-                      0
+                      0,
                     );
                     const percentage =
                       total > 0 ? ((value / total) * 100).toFixed(1) : 0;
@@ -1106,7 +1147,7 @@
         ) {
           const geoData = stats.geographic_distribution.slice(0, 10);
           const labels = geoData.map((item) =>
-            (item.city || "Unknown").substring(0, 20)
+            (item.city || "Unknown").substring(0, 20),
           );
           const data = geoData.map((item) => {
             const count = parseInt(item.donor_count) || 0;
@@ -1303,9 +1344,8 @@
       }
 
       function updateUsersCount(total) {
-        document.getElementById(
-          "usersCount"
-        ).textContent = `Total: ${total} users`;
+        document.getElementById("usersCount").textContent =
+          `Total: ${total} users`;
       }
 
       function updateUsersPagination(pagination) {
@@ -1351,21 +1391,21 @@
       function viewUserDetails(userId) {
         Notifications.info(
           "User Details",
-          "User details feature will be implemented soon!"
+          "User details feature will be implemented soon!",
         );
       }
 
       function editUser(userId) {
         Notifications.info(
           "Edit User",
-          "User editing feature will be implemented soon!"
+          "User editing feature will be implemented soon!",
         );
       }
 
       function activateUser(userId) {
         Notifications.confirm(
           "Activate User",
-          "Are you sure you want to activate this user?"
+          "Are you sure you want to activate this user?",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_user_status.php", {
@@ -1386,7 +1426,7 @@
       function deactivateUser(userId) {
         Notifications.confirm(
           "Deactivate User",
-          "Are you sure you want to deactivate this user?"
+          "Are you sure you want to deactivate this user?",
         ).then((result) => {
           if (result.isConfirmed) {
             API.post("update_user_status.php", {
@@ -1396,7 +1436,7 @@
               if (response.success) {
                 Notifications.success(
                   "Success",
-                  "User deactivated successfully"
+                  "User deactivated successfully",
                 );
                 loadUsers(currentUsersPage);
               } else {
@@ -1410,7 +1450,7 @@
       function exportUsers() {
         Notifications.info(
           "Export Users",
-          "Users export feature will be implemented soon!"
+          "Users export feature will be implemented soon!",
         );
       }
 
@@ -1418,7 +1458,7 @@
         // Implement reports modal
         Notifications.info(
           "Reports & Analytics",
-          "Advanced reporting feature coming soon!"
+          "Advanced reporting feature coming soon!",
         );
       }
 
@@ -1449,7 +1489,7 @@
       function logout() {
         Notifications.confirm(
           "Logout",
-          "Are you sure you want to logout?"
+          "Are you sure you want to logout?",
         ).then((result) => {
           if (result.isConfirmed) {
             Session.logout()
