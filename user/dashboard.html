@@ -1679,52 +1679,102 @@
         }
       }
 
+      let dashboardCampaigns = [];
+      let dashboardRegisteredCampaigns = [];
+
       function loadUpcomingCampaigns() {
-        API.get("get_user_campaigns.php", { limit: 5 })
+        API.get("get_campaigns.php")
           .then((response) => {
-            if (response.success) {
-              displayUpcomingCampaigns(response.data);
+            if (!response.success) {
+              throw new Error(response.message || "Failed to load campaigns");
             }
+
+            dashboardCampaigns = response.data || [];
+
+            return API.get("get_user_campaigns.php")
+              .then((registeredResponse) => {
+                if (registeredResponse.success && registeredResponse.data) {
+                  dashboardRegisteredCampaigns = mergeRegisteredCampaigns(
+                    registeredResponse.data.map((campaign) => campaign.id),
+                  );
+                } else {
+                  dashboardRegisteredCampaigns = mergeRegisteredCampaigns([]);
+                }
+              })
+              .catch(() => {
+                dashboardRegisteredCampaigns = mergeRegisteredCampaigns([]);
+              });
+          })
+          .then(() => {
+            displayUpcomingCampaigns(dashboardCampaigns);
           })
           .catch((error) => {
             console.error("Error loading campaigns:", error);
+            displayUpcomingCampaigns([]);
           });
       }
 
       function displayUpcomingCampaigns(campaigns) {
         const container = document.getElementById("upcomingCampaigns");
+        const activeCampaigns = (campaigns || []).filter(
+          (campaign) =>
+            campaign.status === "active" && !isCampaignEnded(campaign),
+        );
 
-        if (campaigns.length === 0) {
+        if (activeCampaigns.length === 0) {
           container.innerHTML =
-            '<p class="text-muted">No upcoming campaigns</p>';
+            '<p class="text-muted">No active blood drives right now</p>';
           return;
         }
 
-        container.innerHTML = campaigns
-          .map(
-            (campaign) => `
-                <div class="campaign-item">
-                    <div class="campaign-info">
-                        <div class="campaign-title">${Utils.escapeHtml(
-                          campaign.title,
-                        )}</div>
-                        <div class="campaign-meta">
-                            <i class="fas fa-map-marker-alt"></i> ${Utils.escapeHtml(
-                              campaign.location,
-                            )} •
-                            <i class="fas fa-calendar"></i> ${Utils.formatDate(
-                              campaign.start_date,
-                            )}
-                        </div>
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="registerForCampaign(${
-                      campaign.id
-                    })">
-                        <i class="fas fa-plus"></i> Join
-                    </button>
+        container.innerHTML = activeCampaigns
+          .slice(0, 5)
+          .map((campaign) => {
+            const targetDonors = Number(campaign.target_donors) || 0;
+            const currentDonors = Number(campaign.current_donors) || 0;
+            const isRegistered = dashboardRegisteredCampaigns
+              .map((id) => String(id))
+              .includes(String(campaign.id));
+            const effectiveCurrent = isRegistered
+              ? currentDonors + 1
+              : currentDonors;
+            const progress =
+              targetDonors > 0
+                ? Math.min(100, (effectiveCurrent / targetDonors) * 100)
+                : 0;
+            const progressClass = getProgressColor(progress);
+            const locationText = getCampaignLocation(campaign);
+
+            return `
+              <div class="campaign-item">
+                <div class="campaign-info">
+                  <div class="campaign-title">${safeEscapeHtml(
+                    campaign.title,
+                  )}</div>
+                  <div class="campaign-meta">
+                    <i class="fas fa-map-marker-alt"></i> ${safeEscapeHtml(
+                      locationText,
+                    )} •
+                    <i class="fas fa-calendar"></i> ${safeFormatDate(
+                      campaign.start_date,
+                    )}
+                  </div>
+                  <div class="progress mt-2" style="height: 6px;">
+                    <div class="progress-bar ${progressClass}" style="width: ${progress}%"></div>
+                  </div>
+                  <small class="text-muted">${effectiveCurrent} / ${targetDonors} donors</small>
                 </div>
-            `,
-          )
+                ${
+                  {
+                    true: '<button class="btn btn-success btn-sm" disabled><i class="fas fa-check"></i> Registered</button>',
+                    false: `<button class="btn btn-primary btn-sm" onclick="registerForCampaign(${campaign.id})">
+                      <i class="fas fa-plus"></i> Join
+                    </button>`,
+                  }[isRegistered]
+                }
+              </div>
+            `;
+          })
           .join("");
       }
 
@@ -1743,7 +1793,9 @@
                     "Success",
                     "You have been registered for the campaign!",
                   );
-                  loadUpcomingCampaigns(); // Refresh the list
+                  rememberRegisteredCampaign(campaignId);
+                  loadUpcomingCampaigns();
+                  loadDynamicDashboardData();
                 } else {
                   throw new Error(response.message);
                 }
@@ -1757,6 +1809,63 @@
               });
           }
         });
+      }
+
+      function getStoredRegisteredCampaigns() {
+        try {
+          const raw = localStorage.getItem("registeredCampaigns");
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.warn("Unable to read stored campaigns:", error);
+          return [];
+        }
+      }
+
+      function rememberRegisteredCampaign(campaignId) {
+        const stored = getStoredRegisteredCampaigns();
+        const normalizedId = String(campaignId);
+        if (!stored.map((id) => String(id)).includes(normalizedId)) {
+          stored.push(campaignId);
+          localStorage.setItem("registeredCampaigns", JSON.stringify(stored));
+        }
+      }
+
+      function mergeRegisteredCampaigns(apiCampaigns) {
+        const combined = [...apiCampaigns, ...getStoredRegisteredCampaigns()];
+        const unique = new Map();
+        combined.forEach((id) => {
+          unique.set(String(id), id);
+        });
+        return Array.from(unique.values());
+      }
+
+      function getProgressColor(progress) {
+        if (progress >= 75) return "bg-success";
+        if (progress >= 50) return "bg-info";
+        if (progress >= 25) return "bg-warning";
+        return "bg-danger";
+      }
+
+      function safeEscapeHtml(text) {
+        if (window.Utils && typeof Utils.escapeHtml === "function") {
+          return Utils.escapeHtml(text || "");
+        }
+
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function getCampaignLocation(campaign) {
+        return (
+          campaign.city ||
+          campaign.location ||
+          campaign.hospital_name ||
+          "Not specified"
+        );
       }
 
       function scheduleAppointment() {
