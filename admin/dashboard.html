@@ -195,6 +195,14 @@
         background: var(--accent-white);
         border-radius: var(--border-radius-lg);
         box-shadow: var(--shadow-md);
+        margin-bottom: 2rem;
+        height: 320px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .recent-activities .card-body {
+        flex: 1;
       }
 
       .activity-item {
@@ -471,8 +479,8 @@
           </div>
         </div>
 
-        <div class="row">
-          <div class="col-6">
+        <div class="row align-items-stretch">
+          <div class="col-md-6">
             <div class="chart-container">
               <h4>
                 <i class="fas fa-map-marker-alt"></i> Geographic Distribution
@@ -480,7 +488,7 @@
               <canvas id="geographicChart" width="400" height="300"></canvas>
             </div>
           </div>
-          <div class="col-6">
+          <div class="col-md-6">
             <div class="recent-activities">
               <div class="card-header">
                 <h4><i class="fas fa-clock"></i> Recent Activities</h4>
