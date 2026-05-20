@@ -921,6 +921,9 @@
     <script>
       let userData = null;
       let countdownInterval = null;
+      let lastDonationTotal = null;
+      let lastDonationDateCache = null;
+      let countdownDaysRemaining = 0;
 
       document.addEventListener("DOMContentLoaded", function () {
         // Check user authentication
@@ -932,7 +935,7 @@
         loadRecentActivity();
         loadUpcomingCampaigns();
 
-        // Start countdown timer
+        // Start countdown timer (will update once stats load)
         startNextDonationCountdown();
 
         // Set up auto-refresh
@@ -1022,16 +1025,24 @@
             if (response.success) {
               const stats = response.data;
 
+              const totalDonations = stats.total_donations || 0;
+              const lastDonationDate =
+                stats.donations?.last_donation_date ||
+                stats.last_donation_date ||
+                null;
+
               document.getElementById("totalDonations").textContent =
-                stats.total_donations || 0;
+                totalDonations;
               document.getElementById("lifeSaved").textContent =
-                stats.total_donations * 3 || 0; // Assuming 3 lives per donation
+                totalDonations * 3 || 0; // Assuming 3 lives per donation
               document.getElementById("rewardPoints").textContent =
                 stats.reward_points || 0;
               document.getElementById("totalPoints").textContent =
                 stats.reward_points || 0;
               document.getElementById("consecutiveDonations").textContent =
                 stats.consecutive_donations || 0;
+
+              startNextDonationCountdown(totalDonations, lastDonationDate);
             }
           })
           .catch((error) => {
@@ -1459,6 +1470,8 @@
                   messageEl.textContent = "Your eligibility is being reviewed.";
                   break;
               }
+
+              applyCountdownEligibilityState();
             }
           })
           .catch((error) => {
@@ -1466,30 +1479,57 @@
           });
       }
 
-      function startNextDonationCountdown() {
-        API.get("get_next_donation_date.php")
-          .then((response) => {
-            if (response.success) {
-              const nextDate = new Date(response.data.next_donation_date);
-              const now = new Date();
+      function startNextDonationCountdown(totalDonations, lastDonationDate) {
+        const donations = Number(totalDonations) || 0;
+        const lastDateValue = lastDonationDate || null;
+        const lastDate = lastDateValue ? new Date(lastDateValue) : null;
 
-              if (nextDate <= now) {
-                // Can donate now
-                document.getElementById("nextDonationText").textContent =
-                  "You can donate blood now!";
-                document.getElementById("countdownTimer").style.display =
-                  "none";
-              } else {
-                // Start countdown
-                countdownInterval = setInterval(() => {
-                  updateCountdown(nextDate);
-                }, 1000);
-              }
-            }
-          })
-          .catch((error) => {
-            console.error("Error loading next donation date:", error);
-          });
+        if (!donations || !lastDate || Number.isNaN(lastDate.getTime())) {
+          clearCountdown();
+          setNextDonationReady();
+          return;
+        }
+
+        const shouldReset =
+          lastDonationTotal === null ||
+          donations > lastDonationTotal ||
+          lastDonationDateCache !== lastDateValue;
+
+        lastDonationTotal = donations;
+        lastDonationDateCache = lastDateValue;
+
+        const nextEligible = addDays(lastDate, 90);
+        if (!shouldReset && countdownInterval) {
+          return;
+        }
+
+        clearCountdown();
+        document.getElementById("countdownTimer").style.display = "flex";
+        updateCountdown(nextEligible);
+        countdownInterval = setInterval(() => {
+          updateCountdown(nextEligible);
+        }, 1000);
+      }
+
+      function clearCountdown() {
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }
+
+      function setNextDonationReady() {
+        countdownDaysRemaining = 0;
+        document.getElementById("nextDonationText").textContent =
+          "You can donate blood now!";
+        document.getElementById("countdownTimer").style.display = "none";
+        applyCountdownEligibilityState();
+      }
+
+      function addDays(date, days) {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        return next;
       }
 
       function updateCountdown(targetDate) {
@@ -1498,14 +1538,12 @@
 
         if (distance < 0) {
           // Countdown finished
-          clearInterval(countdownInterval);
-          document.getElementById("nextDonationText").textContent =
-            "You can donate blood now!";
-          document.getElementById("countdownTimer").style.display = "none";
+          clearCountdown();
+          setNextDonationReady();
           return;
         }
 
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const days = Math.ceil(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor(
           (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
         );
@@ -1514,6 +1552,29 @@
         document.getElementById("days").textContent = days;
         document.getElementById("hours").textContent = hours;
         document.getElementById("minutes").textContent = minutes;
+
+        countdownDaysRemaining = days;
+        document.getElementById("nextDonationText").textContent =
+          `You can donate after ${days} day${days === 1 ? "" : "s"}.`;
+        applyCountdownEligibilityState();
+      }
+
+      function applyCountdownEligibilityState() {
+        if (!countdownDaysRemaining || countdownDaysRemaining <= 0) {
+          return;
+        }
+
+        const statusDiv = document.getElementById("eligibilityStatus");
+        const messageEl = document.getElementById("eligibilityMessage");
+        if (!statusDiv || !messageEl) {
+          return;
+        }
+        statusDiv.className = "eligibility-status ineligible";
+        statusDiv.innerHTML =
+          '<h4><i class="fas fa-times-circle"></i> You are not eligible to donate!</h4>';
+        messageEl.textContent = `You can donate blood after ${
+          countdownDaysRemaining
+        } day${countdownDaysRemaining === 1 ? "" : "s"} and help save lives.`;
       }
 
       function loadBloodCompatibility(bloodType) {
