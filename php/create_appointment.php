@@ -190,7 +190,7 @@ try {
         
         // Try to log the activity (skip if table doesn't exist)
         try {
-            $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, created_at) VALUES (?, 'appointment_created', ?, NOW())");
+            $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address, created_at) VALUES (?, 'appointment_created', ?, ?, NOW())");
             $stmt->execute([$donor_id, json_encode([
                 'appointment_id' => $appointment_id,
                 'hospital_id' => $hospital_id,
@@ -198,7 +198,7 @@ try {
                 'appointment_date' => $appointment_date,
                 'appointment_time' => $appointment_time,
                 'blood_type' => $blood_type
-            ])]);
+            ]), $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
         } catch (PDOException $e) {
             // Ignore if activity_logs table doesn't exist
             error_log("Activity log failed (table may not exist): " . $e->getMessage());

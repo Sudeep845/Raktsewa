@@ -181,7 +181,7 @@ function logActivity($userId, $action, $details = null) {
     try {
         $db = getDBConnection();
         $stmt = $db->prepare("
-            INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent, created_at) 
+            INSERT INTO activity_logs (user_id, action, description, ip_address, user_agent, created_at) 
             VALUES (?, ?, ?, ?, ?, NOW())
         ");
         

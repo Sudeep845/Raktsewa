@@ -74,13 +74,13 @@ try {
                 // Log the cancellation
                 if ($success) {
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, created_at) VALUES (?, 'appointment_cancelled', ?, NOW())");
+                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address, created_at) VALUES (?, 'appointment_cancelled', ?, ?, NOW())");
                         $stmt->execute([$appointment['donor_id'], json_encode([
                             'appointment_id' => $appointment_id,
                             'hospital_name' => $appointment['hospital_name'],
                             'appointment_date' => $appointment['appointment_date'],
                             'appointment_time' => $appointment['appointment_time']
-                        ])]);
+                        ]), $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
                     } catch (PDOException $e) {
                         error_log("Activity log failed: " . $e->getMessage());
                         // Continue without failing the main operation
@@ -109,13 +109,13 @@ try {
                 // Log the confirmation
                 if ($success) {
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, created_at) VALUES (?, 'appointment_confirmed', ?, NOW())");
+                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address, created_at) VALUES (?, 'appointment_confirmed', ?, ?, NOW())");
                         $stmt->execute([$appointment['donor_id'], json_encode([
                             'appointment_id' => $appointment_id,
                             'hospital_name' => $appointment['hospital_name'],
                             'appointment_date' => $appointment['appointment_date'],
                             'appointment_time' => $appointment['appointment_time']
-                        ])]);
+                        ]), $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
                     } catch (PDOException $e) {
                         error_log("Activity log failed: " . $e->getMessage());
                         // Continue without failing the main operation
@@ -180,14 +180,14 @@ try {
                     
                     // Log the activity
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, created_at) VALUES (?, 'appointment_completed', ?, NOW())");
+                        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address, created_at) VALUES (?, 'appointment_completed', ?, ?, NOW())");
                         $stmt->execute([$appointment['donor_id'], json_encode([
                             'appointment_id' => $appointment_id,
                             'hospital_name' => $appointment['hospital_name'],
                             'appointment_date' => $appointment['appointment_date'],
                             'appointment_time' => $appointment['appointment_time'],
                             'blood_type' => $appointment['blood_type']
-                        ])]);
+                        ]), $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
                     } catch (PDOException $e) {
                         error_log("Activity log failed: " . $e->getMessage());
                         // Continue without failing the main operation
