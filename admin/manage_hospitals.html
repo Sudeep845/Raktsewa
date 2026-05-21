@@ -890,9 +890,9 @@
                     </td>
                     <td>
                         <div>${Utils.escapeHtml(hospital.address)}</div>
-                        <small class="text-muted">${Utils.escapeHtml(
-                          hospital.city,
-                        )}, ${Utils.escapeHtml(hospital.state)}</small>
+                        <small class="text-muted">${formatHospitalLocation(
+                          hospital,
+                        )}</small>
                     </td>
                     <td>
                         <div>${Utils.formatDate(hospital.created_at)}</div>
@@ -935,6 +935,22 @@
                 `;
           })
           .join("");
+      }
+
+      function formatHospitalLocation(hospital) {
+        const city =
+          hospital?.city && hospital.city !== "Not specified"
+            ? hospital.city.trim()
+            : "";
+        const state =
+          hospital?.state && hospital.state !== "Not specified"
+            ? hospital.state.trim()
+            : "";
+        const parts = [city, state].filter(Boolean);
+        if (parts.length === 0) {
+          return "";
+        }
+        return Utils.escapeHtml(parts.join(", "));
       }
 
       function getActionButtons(hospital) {
