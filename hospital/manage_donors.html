@@ -1277,9 +1277,7 @@
                                 <div class="donor-meta">
                                     Age: ${calculateAge(
                                       donor.date_of_birth
-                                    )} • ${Utils.escapeHtml(
-              donor.city || donor.state || "Unknown Location"
-            )}
+                                    )}${formatDonorLocation(donor)}
                                 </div>
                             </div>
                         </div>
@@ -1409,6 +1407,20 @@
         loadDonors(1);
       }
 
+      function formatDonorLocation(donor) {
+        const city = donor?.city && donor.city !== "Not specified"
+          ? donor.city.trim()
+          : "";
+        const state = donor?.state && donor.state !== "Not specified"
+          ? donor.state.trim()
+          : "";
+        const parts = [city, state].filter(Boolean);
+        if (parts.length === 0) {
+          return "";
+        }
+        return ` • ${Utils.escapeHtml(parts.join(", "))}`;
+      }
+
       function clearFilters() {
         document.getElementById("searchInput").value = "";
         document.getElementById("bloodTypeFilter").value = "";
@@ -1469,10 +1481,10 @@
                                   donor.full_name
                                 )}</td></tr>
                                 <tr><td><strong>Email:</strong></td><td>${Utils.escapeHtml(
-                                  donor.email || "Not provided"
+                                  donor.email || ""
                                 )}</td></tr>
                                 <tr><td><strong>Phone:</strong></td><td>${Utils.escapeHtml(
-                                  donor.phone
+                                  donor.phone || ""
                                 )}</td></tr>
                                 <tr><td><strong>Date of Birth:</strong></td><td>${Utils.formatDate(
                                   donor.date_of_birth
@@ -1480,7 +1492,7 @@
           donor.date_of_birth
         )})</td></tr>
                                 <tr><td><strong>Gender:</strong></td><td>${Utils.escapeHtml(
-                                  donor.gender
+                                  donor.gender || ""
                                 )}</td></tr>
                                 <tr><td><strong>Blood Type:</strong></td><td><span class="blood-type-badge">${
                                   donor.blood_type
@@ -1493,19 +1505,19 @@
                             <h6><i class="fas fa-map-marker-alt"></i> Contact Information</h6>
                             <table class="table table-sm">
                                 <tr><td><strong>Address:</strong></td><td>${Utils.escapeHtml(
-                                  donor.address || "Not provided"
+                                  donor.address || ""
                                 )}</td></tr>
                                 <tr><td><strong>City:</strong></td><td>${Utils.escapeHtml(
-                                  donor.city || "Not provided"
+                                  donor.city || ""
                                 )}</td></tr>
                                 <tr><td><strong>State:</strong></td><td>${Utils.escapeHtml(
-                                  donor.state || "Not provided"
+                                  donor.state || ""
                                 )}</td></tr>
                                 <tr><td><strong>Postal Code:</strong></td><td>${Utils.escapeHtml(
-                                  donor.postal_code || "Not provided"
+                                  donor.postal_code || ""
                                 )}</td></tr>
                                 <tr><td><strong>Emergency Contact:</strong></td><td>${Utils.escapeHtml(
-                                  donor.emergency_contact || "Not provided"
+                                  donor.emergency_contact || ""
                                 )}</td></tr>
                             </table>
                         </div>
@@ -1533,6 +1545,9 @@
 
         document.getElementById("donorHistory").innerHTML =
           renderDonationHistory(donor.donation_history || [], donor.id);
+
+        document.getElementById("donorMedical").innerHTML =
+          renderMedicalInfo(donor);
       }
 
       function renderDonationHistory(history, donorId) {
@@ -1588,6 +1603,46 @@
           })
           .join("");
       }
+
+          function renderMedicalInfo(donor) {
+          const conditions = Array.isArray(donor.medical_conditions)
+            ? donor.medical_conditions
+            : [];
+          const hasConditions = conditions.length > 0;
+          const conditionsMarkup = hasConditions
+            ? `<ul class="mb-2">${conditions
+              .map((condition) => `<li>${Utils.escapeHtml(condition)}</li>`)
+              .join("")}</ul>`
+            : `<div class="text-muted">No reported medical conditions.</div>`;
+
+          return `
+            <div class="detail-section">
+              <h6><i class="fas fa-notes-medical"></i> Medical Overview</h6>
+              <table class="table table-sm">
+                <tr>
+                  <td><strong>Blood Type:</strong></td>
+                  <td>${Utils.escapeHtml(donor.blood_type || "N/A")}</td>
+                </tr>
+                <tr>
+                  <td><strong>Weight:</strong></td>
+                  <td>${Utils.escapeHtml(donor.weight || "Not provided")}</td>
+                </tr>
+                <tr>
+                  <td><strong>Last Donation:</strong></td>
+                  <td>${donor.last_donation_date ? Utils.formatDate(donor.last_donation_date) : "Never"}</td>
+                </tr>
+                <tr>
+                  <td><strong>Eligibility:</strong></td>
+                  <td>${getEligibilityTextForDonor(donor)}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="detail-section">
+              <h6><i class="fas fa-heartbeat"></i> Medical Conditions</h6>
+              ${conditionsMarkup}
+            </div>
+            `;
+          }
 
       function switchTab(tabName) {
         // Hide all tabs
