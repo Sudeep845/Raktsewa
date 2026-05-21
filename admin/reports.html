@@ -720,7 +720,7 @@
                 stats.hospital_count || 0;
               document.getElementById("totalDonors").textContent =
                 stats.donor_count || 0;
-              renderUserRegistrationTrends(stats.total || 0);
+              loadUserRegistrationTrends(stats.total || 0);
               renderRoleDistribution(
                 stats.donor_count || 0,
                 stats.hospital_count || 0,
@@ -729,8 +729,23 @@
           })
           .catch((error) => {
             console.error("Error loading report stats:", error);
-            renderUserRegistrationTrends(0);
+            loadUserRegistrationTrends(0);
             renderRoleDistribution(0, 0);
+          });
+      }
+
+      function loadUserRegistrationTrends(totalUsers) {
+        API.get("get_user_registration_trends.php", { days: 14 })
+          .then((response) => {
+            if (response.success && response.data?.series?.length) {
+              renderUserRegistrationTrends(response.data.series);
+              return;
+            }
+            renderUserRegistrationTrends(buildTrendSeries(14, totalUsers));
+          })
+          .catch((error) => {
+            console.error("Error loading registration trends:", error);
+            renderUserRegistrationTrends(buildTrendSeries(14, totalUsers));
           });
       }
 
@@ -795,7 +810,7 @@
           .join("");
       }
 
-      function renderUserRegistrationTrends(totalUsers) {
+      function renderUserRegistrationTrends(series) {
         const list = document.getElementById("userTrendsList");
         const totalEl = document.getElementById("userTrendsTotal");
         const changeEl = document.getElementById("userTrendsChange");
@@ -804,9 +819,17 @@
           return;
         }
 
-        const series = buildTrendSeries(14, totalUsers);
-        const currentWeek = series.slice(7);
-        const previousWeek = series.slice(0, 7);
+        const safeSeries = Array.isArray(series) ? series : [];
+        if (safeSeries.length < 7) {
+          list.innerHTML =
+            '<div class="text-center text-muted">No trend data available.</div>';
+          totalEl.textContent = "0";
+          changeEl.textContent = "-";
+          changeEl.classList.remove("positive", "negative");
+          return;
+        }
+        const currentWeek = safeSeries.slice(-7);
+        const previousWeek = safeSeries.slice(0, 7);
         const currentTotal = currentWeek.reduce(
           (sum, item) => sum + item.value,
           0,
