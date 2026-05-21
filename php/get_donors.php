@@ -96,10 +96,11 @@ try {
                         u.state,
                         u.is_eligible,
                         u.created_at,
-                        COUNT(d.id) as total_donations,
-                        MAX(d.donation_date) as last_donation
+                        COUNT(CASE WHEN d.status = 'completed' THEN 1 END) as total_donations,
+                        MAX(CASE WHEN d.status = 'completed' THEN d.donation_date END) as last_donation,
+                        MAX(d.donation_date) as last_donation_any
                     FROM users u
-                    LEFT JOIN donations d ON u.id = d.donor_id AND d.status = 'completed'
+                    LEFT JOIN donations d ON u.id = d.donor_id
                     WHERE $whereClause
                     GROUP BY u.id
                     ORDER BY u.full_name ASC
@@ -274,13 +275,15 @@ try {
     // Format donors for frontend
     foreach ($donors as &$donor) {
         // Calculate donation eligibility
+        $lastDonationDate = $donor['last_donation_any'] ?? $donor['last_donation'] ?? null;
         $daysSinceLastDonation = 0;
-        if ($donor['last_donation']) {
-            $daysSinceLastDonation = floor((time() - strtotime($donor['last_donation'])) / 86400);
+        if ($lastDonationDate) {
+            $daysSinceLastDonation = floor((time() - strtotime($lastDonationDate)) / 86400);
         }
         
         $donor['days_since_last_donation'] = $daysSinceLastDonation;
-        $donor['eligible_to_donate'] = $donor['is_eligible'] && ($daysSinceLastDonation >= 56 || !$donor['last_donation']);
+        $donor['eligible_to_donate'] =
+            $donor['is_eligible'] && ($daysSinceLastDonation >= 90 || !$lastDonationDate);
         
         // Format dates
         if ($donor['last_donation']) {
@@ -298,8 +301,8 @@ try {
                 'color' => 'success',
                 'icon' => 'fa-check-circle'
             ];
-        } else if ($daysSinceLastDonation < 56 && $donor['last_donation']) {
-            $daysRemaining = 56 - $daysSinceLastDonation;
+        } else if ($daysSinceLastDonation < 90 && $lastDonationDate) {
+            $daysRemaining = 90 - $daysSinceLastDonation;
             $donor['eligibility_status'] = [
                 'text' => "Eligible in $daysRemaining days",
                 'color' => 'warning',

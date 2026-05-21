@@ -64,7 +64,7 @@ try {
     }
     
     // Get donor details
-    $sql = "SELECT 
+            $sql = "SELECT 
                 u.id,
                 u.username,
                 u.full_name,
@@ -83,11 +83,12 @@ try {
                 u.is_active,
                 u.created_at,
                 u.updated_at,
-                COUNT(d.id) as total_donations,
-                MAX(d.donation_date) as last_donation_date,
-                MIN(d.donation_date) as first_donation_date
+                COUNT(CASE WHEN d.status = 'completed' THEN 1 END) as total_donations,
+                MAX(CASE WHEN d.status = 'completed' THEN d.donation_date END) as last_donation_date,
+                MAX(d.donation_date) as last_donation_any,
+                MIN(CASE WHEN d.status = 'completed' THEN d.donation_date END) as first_donation_date
             FROM users u
-            LEFT JOIN donations d ON u.id = d.donor_id AND d.status = 'completed'
+            LEFT JOIN donations d ON u.id = d.donor_id
             WHERE u.id = ? AND u.role = 'donor'
             GROUP BY u.id";
     
@@ -118,13 +119,13 @@ try {
         $eligibilityStatus = 'not-eligible';
         $eligibilityColor = 'danger';
         $eligibilityIcon = 'fa-times-circle';
-    } elseif (!empty($donor['last_donation_date'])) {
-        $lastDonation = new DateTime($donor['last_donation_date']);
+    } elseif (!empty($donor['last_donation_any']) || !empty($donor['last_donation_date'])) {
+        $lastDonationValue = $donor['last_donation_any'] ?? $donor['last_donation_date'];
+        $lastDonation = new DateTime($lastDonationValue);
         $daysSinceLastDonation = $today->diff($lastDonation)->days;
-        
-        if ($daysSinceLastDonation < 56) {
-            $daysUntilEligible = 56 - $daysSinceLastDonation;
-            $eligibilityStatus = "eligible-in-{$daysUntilEligible}-days";
+
+        if ($daysSinceLastDonation < 90) {
+            $eligibilityStatus = 'ineligible';
             $eligibilityColor = 'warning';
             $eligibilityIcon = 'fa-clock';
         }
@@ -181,6 +182,7 @@ try {
         'eligibility_icon' => $eligibilityIcon,
         'total_donations' => (int)$donor['total_donations'],
         'last_donation_date' => $donor['last_donation_date'],
+        'last_donation_any' => $donor['last_donation_any'] ?? null,
         'first_donation_date' => $donor['first_donation_date'],
         'donation_history' => $donationHistory,
         'member_since' => $donor['created_at'],
@@ -191,9 +193,11 @@ try {
             'total_units_donated' => (int)$donor['total_donations'], // Assuming 1 unit per donation
             'average_donations_per_year' => 0,
             'days_since_registration' => $today->diff(new DateTime($donor['created_at']))->days,
-            'days_since_last_donation' => !empty($donor['last_donation_date']) 
-                ? $today->diff(new DateTime($donor['last_donation_date']))->days 
-                : null
+            'days_since_last_donation' => !empty($donor['last_donation_any']) 
+                ? $today->diff(new DateTime($donor['last_donation_any']))->days 
+                : (!empty($donor['last_donation_date'])
+                    ? $today->diff(new DateTime($donor['last_donation_date']))->days
+                    : null)
         ]
     ];
     

@@ -208,24 +208,25 @@
       }
 
       .eligibility-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: var(--border-radius-lg);
-        font-size: 0.8rem;
-        font-weight: 500;
-        text-transform: uppercase;
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
       }
 
-      .status-eligible {
+      .eligibility-status.eligible {
         background: var(--success-green);
         color: var(--accent-white);
       }
 
-      .status-ineligible {
+      .eligibility-status.ineligible {
         background: var(--danger-red);
         color: var(--accent-white);
       }
 
-      .status-pending {
+      .eligibility-status.pending {
         background: var(--warning-orange);
         color: var(--accent-white);
       }
@@ -1136,6 +1137,116 @@
           });
       }
 
+      function normalizeEligibilityStatus(eligibility) {
+        const rawStatus =
+          typeof eligibility === "string"
+            ? eligibility
+            : eligibility?.status || eligibility?.color || eligibility?.state;
+        const statusValue = String(rawStatus || "").toLowerCase();
+        const status = ["eligible", "ineligible", "pending"].includes(
+          statusValue
+        )
+          ? statusValue
+          : "pending";
+        const label =
+          typeof eligibility === "string"
+            ? eligibility
+            : eligibility?.text || eligibility?.label || "";
+
+        return {
+          status,
+          label: label || getEligibilityLabel(status),
+        };
+      }
+
+      function getEligibilityLabel(status) {
+        switch (status) {
+          case "eligible":
+            return "Eligible to donate";
+          case "ineligible":
+            return "Currently ineligible";
+          case "pending":
+          default:
+            return "Eligibility pending";
+        }
+      }
+
+      function getEligibilityDaysRemaining(lastDonation) {
+        if (!lastDonation) {
+          return null;
+        }
+        const lastDate = new Date(lastDonation);
+        if (Number.isNaN(lastDate.getTime())) {
+          return null;
+        }
+
+        const nextEligible = new Date(lastDate);
+        nextEligible.setDate(nextEligible.getDate() + 90);
+
+        const today = new Date();
+        const diffMs = nextEligible - today;
+        const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        return days > 0 ? days : 0;
+      }
+
+      function getEligibilityIcon(status) {
+        switch (status) {
+          case "eligible":
+            return '<i class="fas fa-check-circle"></i>';
+          case "ineligible":
+            return '<i class="fas fa-times-circle"></i>';
+          case "pending":
+          default:
+            return '<i class="fas fa-clock"></i>';
+        }
+      }
+
+      function getEligibilityBadgeForDonor(donor) {
+        const { status, label } = normalizeEligibilityStatus(
+          donor?.eligibility_status
+        );
+        let displayLabel = label;
+
+        if (status === "ineligible") {
+          const daysRemaining = getEligibilityDaysRemaining(
+            donor?.last_donation_any || donor?.last_donation
+          );
+          if (typeof daysRemaining === "number") {
+            displayLabel = `Eligible in ${daysRemaining} day${
+              daysRemaining === 1 ? "" : "s"
+            }`;
+          }
+        }
+
+        return `
+            <div class="eligibility-status ${status}">
+              ${getEligibilityIcon(status)}
+              <span>${Utils.escapeHtml(displayLabel)}</span>
+            </div>
+          `;
+      }
+
+      function getEligibilityTextForDonor(donor) {
+        const { status, label } = normalizeEligibilityStatus(
+          donor?.eligibility_status
+        );
+        let displayLabel = label;
+
+        if (status === "ineligible") {
+          const daysRemaining = getEligibilityDaysRemaining(
+            donor?.last_donation_any || donor?.last_donation
+          );
+          if (typeof daysRemaining === "number") {
+            displayLabel = `Eligible in ${daysRemaining} day${
+              daysRemaining === 1 ? "" : "s"
+            }`;
+          }
+        }
+
+        return Utils.escapeHtml(displayLabel);
+      }
+
       function displayDonors(donors) {
         const tbody = document.getElementById("donorsTableBody");
 
@@ -1200,15 +1311,7 @@
                         }
                     </td>
                     <td>
-                        <span class="eligibility-status status-${
-                          donor.eligibility_status?.color || "pending"
-                        }">
-                            ${
-                              donor.eligibility_status?.text ||
-                              donor.eligibility_status ||
-                              "Pending"
-                            }
-                        </span>
+                      <div>${getEligibilityTextForDonor(donor)}</div>
                     </td>
                     <td>
                         <div class="donor-actions">
@@ -1418,9 +1521,7 @@
                         </tr>
                         <tr>
                             <td><strong>Eligibility Status:</strong></td>
-                            <td><span class="eligibility-status status-${
-                              donor.eligibility_status
-                            }">${donor.eligibility_status}</span></td>
+                          <td>${getEligibilityTextForDonor(donor)}</td>
                         </tr>
                         <tr>
                             <td><strong>Last Updated:</strong></td>
