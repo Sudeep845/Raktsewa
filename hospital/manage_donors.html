@@ -1530,6 +1530,63 @@
                     </table>
                 </div>
             `;
+
+        document.getElementById("donorHistory").innerHTML =
+          renderDonationHistory(donor.donation_history || [], donor.id);
+      }
+
+      function renderDonationHistory(history, donorId) {
+        if (!Array.isArray(history) || history.length === 0) {
+          return `
+                <div class="text-center text-muted">
+                    <i class="fas fa-history"></i> No donation history available.
+                </div>
+            `;
+        }
+
+        const filteredHistory = history.filter((item) => {
+          if (item.donor_id === undefined || item.donor_id === null) {
+            return true;
+          }
+          return String(item.donor_id) === String(donorId);
+        });
+
+        if (filteredHistory.length === 0) {
+          return `
+                <div class="text-center text-muted">
+                    <i class="fas fa-history"></i> No donation history available.
+                </div>
+            `;
+        }
+
+        return filteredHistory
+          .map((item) => {
+            const status = item.status ? item.status.toLowerCase() : "unknown";
+            const statusLabel = status.replace(/_/g, " ");
+            const hospitalName = item.hospital_name
+              ? Utils.escapeHtml(item.hospital_name)
+              : "Unknown Hospital";
+
+            return `
+                <div class="donation-history-item">
+                    <div class="donation-date">
+                        ${Utils.formatDate(item.donation_date)}
+                    </div>
+                    <div class="text-muted">
+                        ${Utils.escapeHtml(item.blood_type || "N/A")} • ${Utils.escapeHtml(
+              item.units_donated ? `${item.units_donated} units` : "Units N/A"
+            )}
+                    </div>
+                    <div class="text-muted">
+                        ${hospitalName}
+                    </div>
+                    <div class="text-muted">
+                        Status: ${Utils.escapeHtml(statusLabel)}
+                    </div>
+                </div>
+              `;
+          })
+          .join("");
       }
 
       function switchTab(tabName) {

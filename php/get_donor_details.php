@@ -133,6 +133,9 @@ try {
     
     // Get recent donation history
     $donationHistorySql = "SELECT 
+                                d.id as donation_id,
+                                d.donor_id,
+                                d.hospital_id,
                                 donation_date,
                                 blood_type,
                                 units_donated,
