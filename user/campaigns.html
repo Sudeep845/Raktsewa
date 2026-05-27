@@ -397,12 +397,12 @@
             if (response.success && response.data) {
               allCampaigns = response.data || [];
 
-              // Load registered campaigns
-              return API.get("get_user_campaigns.php")
+              // Load registered campaigns (fixed)
+              return API.get("../php/get_registered_campaigns.php")
                 .then((regResponse) => {
                   if (regResponse.success && regResponse.data) {
                     registeredCampaigns = mergeRegisteredCampaigns(
-                      regResponse.data.map((c) => c.campaign_id || c.id),
+                      regResponse.data.map((id) => id),
                     );
                   } else {
                     registeredCampaigns = mergeRegisteredCampaigns([]);
@@ -473,9 +473,7 @@
             const isRegistered = registeredCampaigns
               .map((id) => String(id))
               .includes(String(campaign.id));
-            const effectiveCurrent = isRegistered
-              ? baseCurrent + 1
-              : baseCurrent;
+            const effectiveCurrent = baseCurrent;
             const progress =
               targetDonors > 0
                 ? Math.min(100, (effectiveCurrent / targetDonors) * 100)
@@ -629,8 +627,7 @@
                     "Registered!",
                     "You have successfully registered for this campaign",
                   );
-                  rememberRegisteredCampaign(campaignId);
-                  updateCampaignProgress(campaignId);
+                  loadCampaigns();
                 } else if (
                   response.message &&
                   response.message.toLowerCase().includes("already registered")
@@ -639,8 +636,7 @@
                     "Already Registered",
                     "You are already registered for this campaign",
                   );
-                  rememberRegisteredCampaign(campaignId);
-                  updateCampaignProgress(campaignId);
+                  loadCampaigns();
                 } else {
                   throw new Error(response.message);
                 }
@@ -655,34 +651,6 @@
         });
       }
 
-      function updateCampaignProgress(campaignId) {
-        const normalizedId = String(campaignId);
-        const registeredIds = registeredCampaigns.map((id) => String(id));
-        if (!registeredIds.includes(normalizedId)) {
-          registeredCampaigns.push(campaignId);
-        }
-
-        allCampaigns = allCampaigns.map((campaign) => {
-          if (String(campaign.id) !== normalizedId) {
-            return campaign;
-          }
-
-          const target = Number(campaign.target_donors) || 0;
-          const current = Number(campaign.current_donors) || 0;
-          const nextCurrent = current + 1;
-          const progress =
-            target > 0 ? Math.min(100, (nextCurrent / target) * 100) : 0;
-
-          return {
-            ...campaign,
-            current_donors: nextCurrent,
-            progress_percentage: Math.round(progress),
-          };
-        });
-
-        displayCampaigns();
-      }
-
       function getProgressColor(progress) {
         if (progress >= 75) return "bg-success";
         if (progress >= 50) return "bg-info";
@@ -690,31 +658,9 @@
         return "bg-danger";
       }
 
-      function rememberRegisteredCampaign(campaignId) {
-        const stored = getStoredRegisteredCampaigns();
-        const normalizedId = String(campaignId);
-        if (!stored.map((id) => String(id)).includes(normalizedId)) {
-          stored.push(campaignId);
-          localStorage.setItem("registeredCampaigns", JSON.stringify(stored));
-        }
-      }
-
-      function getStoredRegisteredCampaigns() {
-        try {
-          const raw = localStorage.getItem("registeredCampaigns");
-          if (!raw) return [];
-          const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-          console.warn("Unable to read stored campaigns:", error);
-          return [];
-        }
-      }
-
       function mergeRegisteredCampaigns(apiCampaigns) {
-        const combined = [...apiCampaigns, ...getStoredRegisteredCampaigns()];
         const unique = new Map();
-        combined.forEach((id) => {
+        apiCampaigns.forEach((id) => {
           unique.set(String(id), id);
         });
         return Array.from(unique.values());
