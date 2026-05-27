@@ -1790,11 +1790,11 @@
 
             dashboardCampaigns = response.data || [];
 
-            return API.get("get_user_campaigns.php")
+            return API.get("../php/get_registered_campaigns.php")
               .then((registeredResponse) => {
                 if (registeredResponse.success && registeredResponse.data) {
                   dashboardRegisteredCampaigns = mergeRegisteredCampaigns(
-                    registeredResponse.data.map((campaign) => campaign.id),
+                    registeredResponse.data.map((id) => id),
                   );
                 } else {
                   dashboardRegisteredCampaigns = mergeRegisteredCampaigns([]);
@@ -1834,9 +1834,7 @@
             const isRegistered = dashboardRegisteredCampaigns
               .map((id) => String(id))
               .includes(String(campaign.id));
-            const effectiveCurrent = isRegistered
-              ? currentDonors + 1
-              : currentDonors;
+            const effectiveCurrent = currentDonors;
             const progress =
               targetDonors > 0
                 ? Math.min(100, (effectiveCurrent / targetDonors) * 100)
@@ -1892,7 +1890,6 @@
                     "Success",
                     "You have been registered for the campaign!",
                   );
-                  rememberRegisteredCampaign(campaignId);
                   loadUpcomingCampaigns();
                   loadDynamicDashboardData();
                 } else {
@@ -1910,31 +1907,9 @@
         });
       }
 
-      function getStoredRegisteredCampaigns() {
-        try {
-          const raw = localStorage.getItem("registeredCampaigns");
-          if (!raw) return [];
-          const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-          console.warn("Unable to read stored campaigns:", error);
-          return [];
-        }
-      }
-
-      function rememberRegisteredCampaign(campaignId) {
-        const stored = getStoredRegisteredCampaigns();
-        const normalizedId = String(campaignId);
-        if (!stored.map((id) => String(id)).includes(normalizedId)) {
-          stored.push(campaignId);
-          localStorage.setItem("registeredCampaigns", JSON.stringify(stored));
-        }
-      }
-
       function mergeRegisteredCampaigns(apiCampaigns) {
-        const combined = [...apiCampaigns, ...getStoredRegisteredCampaigns()];
         const unique = new Map();
-        combined.forEach((id) => {
+        apiCampaigns.forEach((id) => {
           unique.set(String(id), id);
         });
         return Array.from(unique.values());
