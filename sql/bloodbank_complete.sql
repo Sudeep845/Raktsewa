@@ -340,9 +340,6 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created
 
 -- Audit logs indexes
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_status ON audit_logs(status);
 
 -- Hospital activities indexes
 CREATE INDEX IF NOT EXISTS idx_hospital_activities_hospital_id ON hospital_activities(hospital_id);
@@ -374,18 +371,6 @@ CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at);
 INSERT INTO users (username, email, password, role, full_name, phone, is_eligible, is_active) 
 VALUES ('admin', 'admin@raktasewa.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'System Administrator', '0000000000', 1, 1) 
 ON DUPLICATE KEY UPDATE username = username;
-
--- ====================================================================
--- MIGRATION AND COMPATIBILITY FIXES
--- ====================================================================
-
--- Add user_id column to hospital_activities if it doesn't exist (for existing databases)
-ALTER TABLE hospital_activities 
-ADD COLUMN IF NOT EXISTS user_id INT NULL AFTER hospital_id,
-ADD CONSTRAINT fk_hospital_activities_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
-
--- Add index for user_id if it doesn't exist
-CREATE INDEX IF NOT EXISTS idx_hospital_activities_user_id ON hospital_activities(user_id);
 
 -- ====================================================================
 -- POST-SETUP PROCEDURES
